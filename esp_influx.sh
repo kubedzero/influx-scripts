@@ -44,7 +44,8 @@ do
         echo "Expected 2 lines of HTTP output, got:" ${#linesplitwebdata[@]}
         exit 0
     fi
-    # https://helpmanual.io/builtin/readarray/ -d specifies comma delimiter, -t removes trailing delimiter
+    # https://helpmanual.io/builtin/readarray/ -d specifies comma delimiter, -t removes trailing delimiter.
+    # -d introduced in bash 4.4
     readarray -d , -t headercsvsplit <<<"${linesplitwebdata[0]}"
     readarray -d , -t datacsvsplit <<<"${linesplitwebdata[1]}"
 
