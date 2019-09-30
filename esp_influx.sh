@@ -1,5 +1,6 @@
-#!/usr/local/bin/bash
-# macOS `sh` is located at /bin/sh for 3.2 or /usr/local/bin/bash if installed with Homebrew or /usr/bin/bash for *nix
+#!/usr/local/sbin/bash
+# macOS `sh` is located at /bin/sh for 3.2 or /usr/local/bin/bash if installed with Homebrew
+# *nix is /usr/bin/bash but I installed bash 5.0 manually to /usr/local/sbin/bash on CentOS
 
 # This script pulls data from Arduino ESP8266 sensors that publish their data to self-hosted web pages
 
@@ -11,12 +12,14 @@ declare -a EspIpArray=(
     "10.1.1.32" # living room NodeMCU with a BMP280, DHT22 (nodemcu1 data feed)
     "10.1.1.36" # inside bedroom GeekCreit with a BME280, DHT22 (nodemcu2 data feed)
     "10.1.1.34" # external-facing vent NodeMCU with PMS7003, BME280, DHT22 (nodemcu3 data feed)
+    "10.1.1.35" # inside bedroom closet GeekCreit with a BMP280 (nodemcu4 data feed)
 )
 
 declare -a EspDestArray=(
-    "nodemcu1" # living room NodeMCU with a BMP280, DHT22 (nodemcu1 data feed)
-    "nodemcu2" # inside bedroom GeekCreit with a BME280, DHT22 (nodemcu2 data feed)
-    "nodemcu3" # external-facing vent NodeMCU with PMS7003, BME280, DHT22 (nodemcu3 data feed)
+    "nodemcu1"
+    "nodemcu2"
+    "nodemcu3"
+    "nodemcu4"
 )
 
 # Iterate the string array using for loop
@@ -69,7 +72,7 @@ do
         # check that contents is numeric and above zero
         if [ "$currentDataValue" = "nan" ]; then
             echo "NAN value found for header:" $currentHeaderValue
-            areanynan=true
+            #areanynan=true
         fi
 
         if [ "$currentDataValue" = "inf" ]; then
@@ -90,7 +93,12 @@ do
         # Map the input values to output values
         humidity=${datacsvsplit[3]}
         if [ "$humidity" = "inf" ]; then
+            # Fall back to DHT humidity if BME isn't available
             humidity=${datacsvsplit[0]}
+            if [ "$humidity" = "nan" ]; then
+                # Fall back to 0 if DHT isn't available
+                humidity=0.0
+            fi
         fi
         temperaturec=${datacsvsplit[4]}
         temperaturef=${datacsvsplit[5]}
