@@ -62,3 +62,63 @@ It can also output in CSV format, which is friendlier to parse with `readarray`
 
 
 * The simplest method is to just use the `--simple` printout and then using `awk` to fetch the value from each line that we want. 
+
+
+
+### Cyberpower CP1350PFCLCD Read Data
+
+The CentOS VMs for PowerPanel Business edition Local/Agent sometimes presenst connection refused messages, or doesn't start up. All I really want to do is scrape the data and I found https://www.cyberpowersystems.com/product/software/power-panel-personal/powerpanel-for-linux/ which allows a utility like `pwrstat -status` to print out the following:
+
+
+
+```
+The UPS information shows as following:
+
+	Properties:
+		Model Name................... CP1350PFCLCD
+		Firmware Number.............. CRCA102-3I1
+		Rating Voltage............... 120 V
+		Rating Power................. 810 Watt
+
+	Current UPS status:
+		State........................ Normal
+		Power Supply by.............. Utility Power
+		Utility Voltage.............. 123 V
+		Output Voltage............... 123 V
+		Battery Capacity............. 100 %
+		Remaining Runtime............ 34 min.
+		Load......................... 162 Watt(20 %)
+		Line Interaction............. None
+		Test Result.................. Unknown
+		Last Power Event............. None
+
+```
+
+
+
+There! That gives me voltage, capacity, load, everything I want. It's easy to install on CentOS too.
+
+
+
+* Get `wget` with `sudo yum install wget -y` and then copy link from the above page for 32 or 64 bit depending on your CentOS version. It may look similar to `wget https://dl4jz3rbrsfum.cloudfront.net/software/powerpanel-132-0x86_64.rpm`
+* Then install the utility with `yum install powerpanel-132-0x86_64.rpm  -y`
+* The utility `pwrstat` should then be installed.  
+
+
+
+Interestingly when running `influx` to check on the data I found the following:
+
+
+
+```
+> select * from ups_data where ups = "cyberpower" and time > now() - 5m  LIMIT 10
+> select * from ups_data where ups = 'cyberpower' and time > now() - 5m  LIMIT 10
+name: ups_data
+time                batteryCapacity denhost1.value host loadPercent loadWatts outputVoltage remainingRuntime sensor ups        utilVoltage
+----                --------------- -------------- ---- ----------- --------- ------------- ---------------- ------ ---        -----------
+1571465909800900133 100                                 20          162       123           34                      cyberpower 123
+> exit
+
+```
+
+Wrapping the search string in double quotes didn't allow data to be found, but single quotes was fine. 
