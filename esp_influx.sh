@@ -5,6 +5,7 @@
 # This script pulls data from Arduino ESP8266 sensors that publish their data to self-hosted web pages
 
 # https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
+# Add an `x` for printing out every line automatically, for debugging
 set -euo pipefail
 
 # https://linuxhint.com/bash_loop_list_strings/
@@ -33,7 +34,10 @@ do
     echo $i "/" ${arraylength} ":" ${EspIpArray[$i-1]} "to" ${EspDestArray[$i-1]}
     # https://stackoverflow.com/questions/3742983/how-to-get-the-contents-of-a-webpage-in-a-shell-variable
     # --silent to hide the download prgress from the output
-    webdata=$(curl --silent ${EspIpArray[$i-1]})
+    # https://unix.stackexchange.com/questions/94604/does-curl-have-a-timeout/94612
+    # --max-time to time out the operation if the link is down
+    # || true because pipefail -e recognizes curl no response as a failure and will end the script here otherwise
+    webdata=$(curl --silent ${EspIpArray[$i-1]} --max-time 5 || true)
     # echo $webdata
     # Bash 4 support required for readarray -t y <<<"$webdata".
     readarray -t linesplitwebdata <<<"$webdata"
@@ -41,8 +45,10 @@ do
     # https://stackoverflow.com/questions/13101621/checking-if-length-of-array-is-equal-to-a-variable-in-bash
     # https://stackoverflow.com/questions/9146136/check-if-file-exists-and-continue-else-exit-in-bash
     if [ ! "${#linesplitwebdata[@]}" -eq "2" ]; then
-        echo "Expected 2 lines of HTTP output, got:" ${#linesplitwebdata[@]}
-        exit 0
+    	# https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
+    	# use `echo -e` to interpret newlines rather than just printing \n
+        echo -e "Expected 2 lines of HTTP output, got:" ${#linesplitwebdata[@]} "\n"
+        continue
     fi
     # https://helpmanual.io/builtin/readarray/ -d specifies comma delimiter, -t removes trailing delimiter.
     # -d introduced in bash 4.4
