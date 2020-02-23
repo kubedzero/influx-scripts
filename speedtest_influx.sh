@@ -23,6 +23,6 @@ upload=$(echo "$speedtestresult" | awk '/Upload/{print $2}')
 echo "Ping was $ping ms and download was $download Mbit/s and upload was $upload Mbit/s. Sending to InfluxDB..."
 
 #Write to the database. Separate calls since each has its own metric value as well as value.
-/usr/bin/curl -i -XPOST 'http://10.1.1.7:8086/write?db=local_reporting' --data-binary "speedtest,metric=ping value=$ping"
-/usr/bin/curl -i -XPOST 'http://10.1.1.7:8086/write?db=local_reporting' --data-binary "speedtest,metric=download value=$download"
-/usr/bin/curl -i -XPOST 'http://10.1.1.7:8086/write?db=local_reporting' --data-binary "speedtest,metric=upload value=$upload"
+/usr/bin/curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "speedtest,metric=ping value=$ping"
+/usr/bin/curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "speedtest,metric=download value=$download"
+/usr/bin/curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "speedtest,metric=upload value=$upload"

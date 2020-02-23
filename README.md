@@ -1,6 +1,6 @@
 * https://itnext.io/upgrading-bash-on-macos-7138bd1066ba explains why Bash 3.2 is still on macOS and how to get Bash 4 with Homebrew
 * https://www.shellcheck.net/ can offer suggestions to do shell scripting better
-* https://github.com/lovesegfault/beautysh installed via pip is helpful to format shell script files from the command line
+* https://github.com/lovesegfault/beautysh installed via pip is helpful to format shell script files from the command line. Use with `beautysh file1.sh` to run
 * Installed Bash 5 on macOS which had readarray -d but Bash 4.2 on CentOS did not have it. Updating to bash 5 with https://www.ramoonus.nl/2019/01/08/bash-5-0-installation-for-linux/ and then changing line1 to point to the compiled version
 * https://apple.stackexchange.com/questions/55989/change-my-shell-to-a-different-bash-version-at-usr-local-bin-bash change the default shell per username by editing `/etc/shells` and then running `chsh -s /usr/local/bin/bash username` to set the version you want for your username.
 ```
@@ -122,3 +122,12 @@ time                batteryCapacity denhost1.value host loadPercent loadWatts ou
 ```
 
 Wrapping the search string in double quotes didn't allow data to be found, but single quotes was fine. 
+
+
+
+## IPMI ESXi sensor readings
+
+* Installed IPMITool with `yum install ipmitool` on CentOS
+* I found setting up an Administrator user in the IPMI Supermicro web UI and running `ipmitool -H x9srw.brad -U ipminetworkuser -P ipminetworkpass sensor` yielded pipe-character separated columns for each sensor installed. 
+* https://linuxize.com/post/bash-functions/ shows how to define a function, no input variables need to be explicitly defined and instead are just accessible with `$1` indexed values
+* SCP'd it over to the server and ran `crontab -e` and then added the line `\* * * * * /root/supermicro_ipmi_influx.sh` to get it running every minute

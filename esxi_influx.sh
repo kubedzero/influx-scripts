@@ -1,4 +1,5 @@
 #!/usr/bin/sh
+# NOTE: /bin/sh on macOS, /usr/bin/sh on CentOS
 
 # https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
 set -euo pipefail
@@ -9,7 +10,7 @@ set -euo pipefail
 # call snmpwalk to get all the SNMP data from ESXi. -m MIB-FILE to define a mib file to use if we
 # want to specify a particular object. -c public to identify the community. -v 2c to specify the
 # SNMP version. Pipe the output to grep to grab only the CPU load, and store it.
-	bulkData=$(snmpwalk -m ALL -c public -v 2c 10.1.1.25|grep HOST-RESOURCES-MIB::hrProcessorLoad)
+	bulkData=$(snmpwalk -m ALL -c public -v 2c esxi.brad|grep HOST-RESOURCES-MIB::hrProcessorLoad)
 	echo $bulkData
 	#Parse out CPU usage and get just the number
 	#the quotes around bulkdata preserve the newlines from grep, otherwise it becomes one line
@@ -42,11 +43,11 @@ set -euo pipefail
 	echo -e "CPU12: $cpu12%\n"
 
     #Write the data to the database
-	curl -i -XPOST 'http://10.1.1.7:8086/write?db=local_reporting' --data-binary "esxi_stats,host=esxi1,type=cpu_usage cpu_num1=$cpu1,cpu_num2=$cpu2,cpu_num3=$cpu3,cpu_num4=$cpu4,cpu_num5=$cpu5,cpu_num6=$cpu6,cpu_num7=$cpu7,cpu_num8=$cpu8,cpu_num9=$cpu9,cpu_num10=$cpu10,cpu_num11=$cpu11,cpu_num12=$cpu12"
+	curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "esxi_stats,host=esxi1,type=cpu_usage cpu_num1=$cpu1,cpu_num2=$cpu2,cpu_num3=$cpu3,cpu_num4=$cpu4,cpu_num5=$cpu5,cpu_num6=$cpu6,cpu_num7=$cpu7,cpu_num8=$cpu8,cpu_num9=$cpu9,cpu_num10=$cpu10,cpu_num11=$cpu11,cpu_num12=$cpu12"
 
 
 	#Now get the hardware info from the remote host
-	hwinfo=$(ssh -t root@10.1.1.25 "esxcfg-info --hardware")
+	hwinfo=$(ssh -t root@esxi.brad "esxcfg-info --hardware")
 
 	# Try to find the memory information
 	while read -r line; do
@@ -88,4 +89,4 @@ set -euo pipefail
 	echo -e "Memory Free: $freemem\n"
 	
 	#Write the data to the database
-	curl -i -XPOST 'http://10.1.1.7:8086/write?db=local_reporting' --data-binary "esxi_stats,host=esxi1,type=memory_usage percent=$pcent,free=$freemem,used=$used"
+	curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "esxi_stats,host=esxi1,type=memory_usage percent=$pcent,free=$freemem,used=$used"

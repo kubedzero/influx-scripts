@@ -1,4 +1,5 @@
 #!/usr/bin/sh
+# NOTE: /bin/sh on macOS, /usr/bin/sh on CentOS
 
 # https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
 set -euo pipefail
@@ -60,7 +61,7 @@ echo -e "loadPercent is $loadPercent\n"
 
 # write the data to the database if all values are filled
 if [[ $utilVoltage != "UNFILLED" || $outputVoltage != "UNFILLED" || $batteryCapacity != "UNFILLED" || $remainingRuntime != "UNFILLED" || $loadWatts != "UNFILLED" || $loadPercent != "UNFILLED" ]]; then
-	curl -i -XPOST 'http://10.1.1.7:8086/write?db=local_reporting' --data-binary "ups_data,ups=cyberpower utilVoltage=$utilVoltage,outputVoltage=$outputVoltage,batteryCapacity=$batteryCapacity,remainingRuntime=$remainingRuntime,loadWatts=$loadWatts,loadPercent=$loadPercent"
+	curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "ups_data,ups=cyberpower utilVoltage=$utilVoltage,outputVoltage=$outputVoltage,batteryCapacity=$batteryCapacity,remainingRuntime=$remainingRuntime,loadWatts=$loadWatts,loadPercent=$loadPercent"
 else
 	echo "Some value was unfilled, please fix to submit data to InfluxDB"
 fi

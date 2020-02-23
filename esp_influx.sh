@@ -115,7 +115,7 @@ do
         pm1000=${datacsvsplit[10]}
 
         # Submit all values as one record to InfluxDB
-        curl -i -XPOST 'http://10.1.1.7:8086/write?db=local_reporting' --data-binary \
+        curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary \
             "environment,host=${EspDestArray[$i-1]} humidity=$humidity,temperaturec=$temperaturec,temperaturef=$temperaturef,pressurehg=$pressurehg,pm100=$pm100,pm250=$pm250,pm1000=$pm1000"
 
     fi
