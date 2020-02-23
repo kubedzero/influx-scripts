@@ -46,23 +46,7 @@ getMetricValueFromBulkData () {
 # https://www.unix.com/unix-for-dummies-questions-and-answers/123480-initializing-multiple-variables-one-statement.html
 # Could also do cpuTempC=systemTempC="UNFILLED" but it's easier to modify with one per line
 # initialize variables
-cpuTempC="UNFILLED"
-systemTempC="UNFILLED"
-peripheralTempC="UNFILLED"
-pchTempC="UNFILLED"
-dimmA1TempC="UNFILLED"
-dimmA2TempC="UNFILLED"
-dimmB1TempC="UNFILLED"
-dimmB2TempC="UNFILLED"
-dimmC1TempC="UNFILLED"
-dimmC2TempC="UNFILLED"
-dimmD1TempC="UNFILLED"
-dimmD2TempC="UNFILLED"
-fan1rpm="UNFILLED"
-fan2rpm="UNFILLED"
-fan3rpm="UNFILLED"
-fan4rpm="UNFILLED"
-fan5rpm="UNFILLED"
+cpuTempC=systemTempC=peripheralTempC=pchTempC=dimmA1TempC=dimmA2TempC=dimmB1TempC=dimmB2TempC=dimmC1TempC=dimmC2TempC=dimmD1TempC=dimmD2TempC=fan1rpm=fan2rpm=fan3rpm=fan4rpm=fan5rpm="UNFILLED"
 
 # Call the function, note that the second argument is a reference rather than the value
 # which is necessary to update the passed-in variable

@@ -131,3 +131,50 @@ Wrapping the search string in double quotes didn't allow data to be found, but s
 * I found setting up an Administrator user in the IPMI Supermicro web UI and running `ipmitool -H x9srw.brad -U ipminetworkuser -P ipminetworkpass sensor` yielded pipe-character separated columns for each sensor installed. 
 * https://linuxize.com/post/bash-functions/ shows how to define a function, no input variables need to be explicitly defined and instead are just accessible with `$1` indexed values
 * SCP'd it over to the server and ran `crontab -e` and then added the line `\* * * * * /root/supermicro_ipmi_influx.sh` to get it running every minute
+
+
+
+## UnRAID Hard drive and System readings
+
+* I want to get HDD active/standby state, temperature, CPU usage, RAM usage, and array free space
+
+* I want to run the script on CentOS rather than having it run from UnRAID and post data from there. 
+
+* https://forums.unraid.net/topic/51160-passwordless-ssh-login/ has notes on passwordless SSH setup for unRAID specifically
+
+  * SSH key exists on my script-executing host at `/root/.ssh/id_rsa.pub` (if not follow https://linuxize.com/post/how-to-setup-passwordless-ssh-login/ or https://www.tecmint.com/ssh-passwordless-login-using-ssh-keygen-in-5-easy-steps/ and run `ssh-keygen -t rsa` to generate that file)
+
+  * Technically the preinstalled command `ssh-copy-id root@poorbox.brad` will work. In the background, it is doing `cat ~/.ssh/id_rsa.pub | ssh remote_username@server_ip_address "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"` all in one to create the ssh directory and authorized_keys file and then add your key to it and chmod everything to have the right permissions.
+
+  * ```
+    [root@grafana ~]# ssh-copy-id root@poorbox.brad
+    /usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "/root/.ssh/id_rsa.pub"
+    /usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+    /usr/bin/ssh-copy-id: INFO: 1 key(s) remain to be installed -- if you are prompted now it is to install the new keys
+    root@poorbox.brad's password: 
+    
+    Number of key(s) added: 1
+    
+    Now try logging into the machine, with:   "ssh 'root@poorbox.brad'"
+    and check to make sure that only the key(s) you wanted were added.
+    ```
+
+  * We note that on the unRAID side in the `/root/.ssh/authorized_keys` file we see `ssh-rsa <abbreviated-public-key> root@centOS-VM` and if we change the DNS name or IP of the originating SSH connection, this may not work. I experimented by changing it to another valid name + a different IP and those both seemed to work, so maybe we're lucky or maybe it just needs to be restarted.
+
+  * unRAID is special though in that it stores all persistent data in `/boot` and recreates the `/root` directory on each boot, meaning we'll have to recreate the `authorized_keys` file each time we boot unRAID. The thread https://forums.unraid.net/topic/51160-passwordless-ssh-login/ has a bunch of different suggestions, and the more typical suggestion is to make a custom script that does the above copying and chmodding and then add that script to the `/boot/config/go` file to be executed at startup. The thread also mentions that the `ssh` plugin is preinstalled and has some default behavior, so I want to try that. Another place that's mentioned is https://www.reddit.com/r/unRAID/comments/dlo9r6/help_with_persistent_ssh_on_unraid/f4u4s5q/ saying "For this reason I use the SSH plugin from docgyver which can be found in a Community Applications search. After you install that place your public key in this location /boot/config/plugins/ssh/<user>/.ssh/authorized_keys ."
+
+  * Turns out an extra plugin is needed for that automatic setup. However, that thread yielded `install -d -m700 /root/.ssh install -m600 /boot/config-user/ssh/authorized_keys /root/.ssh/` which I can then modify and add to my own go file, I believe. `cp /root/.ssh/authorized_keys /boot/config/ssh/authorized_keys`  (found out `install` is meant for multiple files and therefore doesn't do renaming) and then add the following to `/boot/config/go` in two separate lines:`install -d -m700 /root/.ssh` and then `install -m600 /boot/config/ssh/authorized_keys /root/.ssh/`
+
+  * After that, running SSH from my script-running host works fine
+
+  * Found an issue. Trying to call `rawResponse=$(ssh -t root@poorbox.brad "hdparm -C /dev/sdg")` in the code would exit the script before continuing. This is due to `set -e` being used and `ssh -t root@poorbox.brad "hdparm -C /dev/sdg"` returning exit status 2 rather than 0 as it should. Exit status 2 means misuse of a command, probably because it's an empty response. I was able to find this out because `echo $?` returns the last exit code
+
+    * https://www.cyberciti.biz/faq/bash-get-exit-code-of-command/
+    * https://unix.stackexchange.com/questions/279777/how-to-catch-and-handle-nonzero-exit-status-within-a-bash-function
+    * I actually ended up finding that `rawResponse=$(ssh -t root@poorbox.brad "hdparm -C /dev/sdg") && echo "executing" || echo "executing"` returns exit code 0 so maybe this will work.  https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash
+    * https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash proposed another method of using `set +e` to turn off error handling before and then `set -e` turning it back on after.
+
+  * I had another issue where parsing the SMART status with `diskTemp=$(echo "$rawResponse" | grep "Temperature" | tr --squeeze-repeats '[:space:]' | cut -d ' ' -f10 | tr -d '\n')` and then trying to print it `echo "x $diskTemp y"` would leave weird output ` y35`
+
+    * https://www.unix.com/shell-programming-and-scripting/146992-how-see-hidden-characters.html shows how to print normally invisible characters so I could see what was happening, turns out there's the ^M character when I run `echo "x $diskTemp y" | cat -v` I get `x 35^M y`
+    * https://unix.stackexchange.com/questions/134695/what-is-the-m-character-called it's a carriage return so adding a final `tr -d '\r'` got it removed https://stackoverflow.com/questions/800030/remove-carriage-return-in-unix 
