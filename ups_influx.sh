@@ -31,25 +31,25 @@ loadPercent="UNFILLED"
 
 # use for loop to read all values and indexes
 for (( i=1; i<${arraylength}+1; i++ ));
-	do
-		# https://stackoverflow.com/questions/22712156/bash-if-string-contains-in-case-statement
-		# check each line of the input for the type we want
-		case ${linesplitdata[$i-1]} in
-	    *"Utility Voltage..."*)
-			# https://unix.stackexchange.com/questions/191122/how-to-split-the-string-after-and-before-the-space-in-shell-script
-			# print the line, split on space, take the field containing the number
-	        utilVoltage=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 );;
-	    *"Output Voltage..."*)
-	        outputVoltage=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 );;
-	    *"Battery Capacity..."*)
-	        batteryCapacity=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 );;
-	    *"Remaining Runtime..."*)
-	        remainingRuntime=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 );;
-	    *"Load..."*)
-	        loadWatts=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f2 )
-	        # isolate the second number in the line by splitting and splitting again
-	        loadPercent=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 | cut -d'(' -f2);;
-	esac
+do
+    # https://stackoverflow.com/questions/22712156/bash-if-string-contains-in-case-statement
+    # check each line of the input for the type we want
+    case ${linesplitdata[$i-1]} in
+        *"Utility Voltage..."*)
+            # https://unix.stackexchange.com/questions/191122/how-to-split-the-string-after-and-before-the-space-in-shell-script
+            # print the line, split on space, take the field containing the number
+            utilVoltage=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 ) ;;
+        *"Output Voltage..."*)
+            outputVoltage=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 ) ;;
+        *"Battery Capacity..."*)
+            batteryCapacity=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 ) ;;
+        *"Remaining Runtime..."*)
+            remainingRuntime=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 ) ;;
+        *"Load..."*)
+            loadWatts=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f2 )
+            # isolate the second number in the line by splitting and splitting again
+            loadPercent=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 | cut -d'(' -f2) ;;
+    esac
 done
 
 echo "utilVoltage is $utilVoltage"
@@ -61,7 +61,7 @@ echo -e "loadPercent is $loadPercent\n"
 
 # write the data to the database if all values are filled
 if [[ $utilVoltage != "UNFILLED" || $outputVoltage != "UNFILLED" || $batteryCapacity != "UNFILLED" || $remainingRuntime != "UNFILLED" || $loadWatts != "UNFILLED" || $loadPercent != "UNFILLED" ]]; then
-	curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "ups_data,ups=cyberpower utilVoltage=$utilVoltage,outputVoltage=$outputVoltage,batteryCapacity=$batteryCapacity,remainingRuntime=$remainingRuntime,loadWatts=$loadWatts,loadPercent=$loadPercent"
+    curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "ups_data,ups=cyberpower utilVoltage=$utilVoltage,outputVoltage=$outputVoltage,batteryCapacity=$batteryCapacity,remainingRuntime=$remainingRuntime,loadWatts=$loadWatts,loadPercent=$loadPercent"
 else
-	echo "Some value was unfilled, please fix to submit data to InfluxDB"
+    echo "Some value was unfilled, please fix to submit data to InfluxDB"
 fi

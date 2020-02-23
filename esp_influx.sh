@@ -45,8 +45,8 @@ do
     # https://stackoverflow.com/questions/13101621/checking-if-length-of-array-is-equal-to-a-variable-in-bash
     # https://stackoverflow.com/questions/9146136/check-if-file-exists-and-continue-else-exit-in-bash
     if [ ! "${#linesplitwebdata[@]}" -eq "2" ]; then
-    	# https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
-    	# use `echo -e` to interpret newlines rather than just printing \n
+        # https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
+        # use `echo -e` to interpret newlines rather than just printing \n
         echo -e "Expected 2 lines of HTTP output, got:" ${#linesplitwebdata[@]} "\n"
         continue
     fi
@@ -117,8 +117,5 @@ do
         # Submit all values as one record to InfluxDB
         curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary \
             "environment,host=${EspDestArray[$i-1]} humidity=$humidity,temperaturec=$temperaturec,temperaturef=$temperaturef,pressurehg=$pressurehg,pm100=$pm100,pm250=$pm250,pm1000=$pm1000"
-
     fi
-
 done
-
