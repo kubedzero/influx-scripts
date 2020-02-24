@@ -56,28 +56,16 @@ getDiskTemp () {
 
         # https://www.cyberciti.biz/faq/unix-linux-execute-command-using-ssh/
         # https://superuser.com/questions/457316/how-to-remove-connection-to-xx-xxx-xx-xxx-closed-message
+        # https://unix.stackexchange.com/questions/66170/how-to-ssh-on-multiple-ipaddress-and-get-the-output-and-error-on-the-local-nix
         # run a remote command on the host and store its value, avoiding "Connection to x closed" message
         # run it with an OR conditional so a bad remote command doesn't cause `set` to end the execution
-        rawResponse="UNFILLED"
+        # make sure STDERR is being redirected to STDOUT the way the normal shell is configured
         rawResponse=$(ssh -t -o LogLevel=QUIET root@poorbox.brad "smartctl -A /dev/$1 2>&1")  || printf "SSH remote command failure for /dev/$1. "
-        echo "do we get past the rawResponse?"
 
-        temperatureLine=$(echo "$rawResponse" | grep "Temperature" )
-        echo "do we get past the temperatureLine?"
-
-        # https://www.cyberciti.biz/faq/unix-linux-bash-script-check-if-variable-is-empty/
-        # if variable is empty, make sure to populate it with an error value
-        if [ -z "$temperatureLine" ]; then
-            echo "Couldn't find temperature SMART attribute for /dev/$1."
-            diskTemp=""
-        else
-            echo "do we getto read the temp?"
-            # https://superuser.com/questions/241018/how-to-replace-multiple-spaces-by-one-tab
-            # https://stackoverflow.com/questions/800030/remove-carriage-return-in-unix
-            # Find line mentioning Temp, reduce repeated spaces to one, split on space, grab field, remove carriage return
-            diskTemp=$(echo "$temperatureLine" | tr --squeeze-repeats '[:space:]' | cut -d ' ' -f10 | tr -d '\r')
-        fi
-
+        # https://superuser.com/questions/241018/how-to-replace-multiple-spaces-by-one-tab
+        # https://stackoverflow.com/questions/800030/remove-carriage-return-in-unix
+        # Find line mentioning Temp, reduce repeated spaces to one, split on space, grab field, remove carriage return
+        diskTemp=$(echo "$rawResponse" | grep "Temperature" | tr --squeeze-repeats '[:space:]' | cut -d ' ' -f10 | tr -d '\r')
 
         # https://www.cyberciti.biz/faq/unix-linux-bash-script-check-if-variable-is-empty/
         # if variable is empty, make sure to populate it with an error value
@@ -87,7 +75,6 @@ getDiskTemp () {
         else
             echo "Disk temperature of /dev/$1 is [$diskTemp]"
         fi
-
 
     else
         echo "Disk /dev/$1 is not installed, setting temp to -1"
@@ -113,7 +100,6 @@ getActiveStandbyState "sdf" sdfActive
 getActiveStandbyState "sdg" sdgActive
 getActiveStandbyState "sdh" sdhActive
 
-
 # Use the HDD Active state and passwordless SSH to get temperature value
 # Define our HDD temp variables
 sdaTempC=sdbTempC=sdcTempC=sddTempC=sdeTempC=sdfTempC=sdgTempC=sdhTempC="UNFILLED"
@@ -130,6 +116,6 @@ getDiskTemp "sdg" $sdgActive sdgTempC
 getDiskTemp "sdh" $sdhActive sdhTempC
 
 #Write the data to the database
-echo -e "\nPosting data to InfluxDB\n"
+echo -e "\n\nPosting data to InfluxDB\n"
 curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "unraid,host=poorbox,type=diskActive sdaActive=$sdaActive,sdbActive=$sdbActive,sdcActive=$sdcActive,sddActive=$sddActive,sdeActive=$sdeActive,sdfActive=$sdfActive,sdgActive=$sdgActive,sdhActive=$sdhActive"
 curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "unraid,host=poorbox,type=diskTemp sdaTempC=$sdaTempC,sdbTempC=$sdbTempC,sdcTempC=$sdcTempC,sddTempC=$sddTempC,sdeTempC=$sdeTempC,sdfTempC=$sdfTempC,sdgTempC=$sdgTempC,sdhTempC=$sdhTempC"
