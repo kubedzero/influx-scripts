@@ -100,8 +100,8 @@ getActiveStandbyState "sdg" sdgActive
 getActiveStandbyState "sdh" sdhActive
 
 
-# Use the Active state and passwordless SSH to get temperature
-# Define our HDD active/standby variables
+# Use the HDD Active state and passwordless SSH to get temperature value
+# Define our HDD temp variables
 sdaTempC=sdbTempC=sdcTempC=sddTempC=sdeTempC=sdfTempC=sdgTempC=sdhTempC="UNFILLED"
 
 # Fetch HDD states with passwordless SSH executing smartctl
@@ -114,3 +114,8 @@ getDiskTemp "sde" $sdeActive sdeTempC
 getDiskTemp "sdf" $sdfActive sdfTempC
 getDiskTemp "sdg" $sdgActive sdgTempC
 getDiskTemp "sdh" $sdhActive sdhTempC
+
+#Write the data to the database
+echo -e "\nPosting data to InfluxDB\n"
+curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "unraid,host=poorbox,type=diskActive sdaActive=$sdaActive,sdbActive=$sdbActive,sdcActive=$sdcActive,sddActive=$sddActive,sdeActive=$sdeActive,sdfActive=$sdfActive,sdgActive=$sdgActive,sdhActive=$sdhActive"
+curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "unraid,host=poorbox,type=diskTemp sdaTempC=$sdaTempC,sdbTempC=$sdbTempC,sdcTempC=$sdcTempC,sddTempC=$sddTempC,sdeTempC=$sdeTempC,sdfTempC=$sdfTempC,sdgTempC=$sdgTempC,sdhTempC=$sdhTempC"

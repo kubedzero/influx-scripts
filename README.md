@@ -177,4 +177,8 @@ Wrapping the search string in double quotes didn't allow data to be found, but s
   * I had another issue where parsing the SMART status with `diskTemp=$(echo "$rawResponse" | grep "Temperature" | tr --squeeze-repeats '[:space:]' | cut -d ' ' -f10 | tr -d '\n')` and then trying to print it `echo "x $diskTemp y"` would leave weird output ` y35`
 
     * https://www.unix.com/shell-programming-and-scripting/146992-how-see-hidden-characters.html shows how to print normally invisible characters so I could see what was happening, turns out there's the ^M character when I run `echo "x $diskTemp y" | cat -v` I get `x 35^M y`
-    * https://unix.stackexchange.com/questions/134695/what-is-the-m-character-called it's a carriage return so adding a final `tr -d '\r'` got it removed https://stackoverflow.com/questions/800030/remove-carriage-return-in-unix 
+    * https://unix.stackexchange.com/questions/134695/what-is-the-m-character-called it's a carriage return so adding a final `tr -d '\r'` got it removed https://stackoverflow.com/questions/800030/remove-carriage-return-in-unix
+
+  * https://stackoverflow.com/questions/11193466/echo-without-newline-in-a-shell-script printf should be used when wanting to avoid newlines, echo behavior is more unreliable
+
+  * I had the old script running as PHP on unRAID itself, and as https://forums.unraid.net/topic/42475-crontab-added-through-go-script-not-working/ notes any `.cron` file under the directory `/boot/config/plugins/dynamix` will get loaded into the crontab. I had a `diskstats.cron` file there with `\* * * * * /usr/bin/php /boot/myScripts/hdStats.php &> /dev/null`. I've moved it out of the directory and run `update_cron` to reload the crontab without a reboot, and then ran `cat /etc/cron.d/root` to check what the current cron setup was (note that `crontab -l` isn't what you want here)
