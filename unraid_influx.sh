@@ -2,7 +2,7 @@
 # NOTE: /bin/sh on macOS, /usr/bin/sh on CentOS
 
 # https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
-set -euo pipefail
+set -euxo pipefail
 
 # Fetch HDD active/standby states, temp, CPU, RAM, and more from unRAID
 
@@ -16,7 +16,7 @@ getActiveStandbyState () {
     # https://superuser.com/questions/457316/how-to-remove-connection-to-xx-xxx-xx-xxx-closed-message
     # run a remote command on the host and store its value, avoiding "Connection to x closed" message
     # run it with an OR conditional so a bad remote command doesn't cause `set` to end the execution
-    rawResponse=$(ssh -t -o LogLevel=QUIET root@poorbox.brad "hdparm -C /dev/$1") || printf "SSH remote command failure for /dev/$1. "
+    rawResponse=$(ssh -t -o LogLevel=QUIET root@poorbox.brad "hdparm -C /dev/$1 2>&1") || printf "SSH remote command failure for /dev/$1. "
 
     # if the response contains "No such file or directory" in the response
     # or "missing sense data" the disk isn't installed so we should mark as -1 error.
@@ -58,12 +58,26 @@ getDiskTemp () {
         # https://superuser.com/questions/457316/how-to-remove-connection-to-xx-xxx-xx-xxx-closed-message
         # run a remote command on the host and store its value, avoiding "Connection to x closed" message
         # run it with an OR conditional so a bad remote command doesn't cause `set` to end the execution
-        rawResponse=$(ssh -t -o LogLevel=QUIET root@poorbox.brad "smartctl -A /dev/$1")  || printf "SSH remote command failure for /dev/$1. "
+        rawResponse="UNFILLED"
+        rawResponse=$(ssh -t -o LogLevel=QUIET root@poorbox.brad "smartctl -A /dev/$1 2>&1")  || printf "SSH remote command failure for /dev/$1. "
+        echo "do we get past the rawResponse?"
 
-        # https://superuser.com/questions/241018/how-to-replace-multiple-spaces-by-one-tab
-        # https://stackoverflow.com/questions/800030/remove-carriage-return-in-unix
-        # Find line mentioning Temp, reduce repeated spaces to one, split on space, grab field, remove carriage return
-        diskTemp=$(echo "$rawResponse" | grep "Temperature" | tr --squeeze-repeats '[:space:]' | cut -d ' ' -f10 | tr -d '\r')
+        temperatureLine=$(echo "$rawResponse" | grep "Temperature" )
+        echo "do we get past the temperatureLine?"
+
+        # https://www.cyberciti.biz/faq/unix-linux-bash-script-check-if-variable-is-empty/
+        # if variable is empty, make sure to populate it with an error value
+        if [ -z "$temperatureLine" ]; then
+            echo "Couldn't find temperature SMART attribute for /dev/$1."
+            diskTemp=""
+        else
+            echo "do we getto read the temp?"
+            # https://superuser.com/questions/241018/how-to-replace-multiple-spaces-by-one-tab
+            # https://stackoverflow.com/questions/800030/remove-carriage-return-in-unix
+            # Find line mentioning Temp, reduce repeated spaces to one, split on space, grab field, remove carriage return
+            diskTemp=$(echo "$temperatureLine" | tr --squeeze-repeats '[:space:]' | cut -d ' ' -f10 | tr -d '\r')
+        fi
+
 
         # https://www.cyberciti.biz/faq/unix-linux-bash-script-check-if-variable-is-empty/
         # if variable is empty, make sure to populate it with an error value
