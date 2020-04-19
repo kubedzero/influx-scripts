@@ -11,9 +11,9 @@ set -euo pipefail
 # https://linuxhint.com/bash_loop_list_strings/
 declare -a EspIpArray=(
     "10.1.1.32" # living room NodeMCU with a BMP280, DHT22 (nodemcu1 data feed)
-    "10.1.1.36" # inside bedroom GeekCreit with a BME280, DHT22 (nodemcu2 data feed)
-    "10.1.1.34" # external-facing vent NodeMCU with PMS7003, BME280, DHT22 (nodemcu3 data feed)
-    "10.1.1.35" # inside bedroom closet GeekCreit with a BMP280 (nodemcu4 data feed)
+    "10.1.1.36" # inside bedroom GeekCreit with a BME280, DHT22, VEML6075 (nodemcu2 data feed)
+    "10.1.1.34" # external-facing vent NodeMCU with PMS7003, BME280 (nodemcu3 data feed)
+    "10.1.1.35" # inside bedroom closet GeekCreit with a BMP280, DHT22 (nodemcu4 data feed)
 )
 
 declare -a EspDestArray=(
@@ -113,9 +113,12 @@ do
         pm100=${datacsvsplit[8]}
         pm250=${datacsvsplit[9]}
         pm1000=${datacsvsplit[10]}
+        uva=${datacsvsplit[11]}
+        uvb=${datacsvsplit[12]}
+        uvindex=${datacsvsplit[13]}
 
         # Submit all values as one record to InfluxDB
         curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary \
-            "environment,host=${EspDestArray[$i-1]} humidity=$humidity,temperaturec=$temperaturec,temperaturef=$temperaturef,pressurehg=$pressurehg,pm100=$pm100,pm250=$pm250,pm1000=$pm1000"
+            "environment,host=${EspDestArray[$i-1]} humidity=$humidity,temperaturec=$temperaturec,temperaturef=$temperaturef,pressurehg=$pressurehg,pm100=$pm100,pm250=$pm250,pm1000=$pm1000,uva=$uva,uvb=$uvb,uvindex=$uvindex"
     fi
 done
