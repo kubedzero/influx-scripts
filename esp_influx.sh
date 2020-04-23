@@ -113,9 +113,9 @@ do
         pm100=${datacsvsplit[8]}
         pm250=${datacsvsplit[9]}
         pm1000=${datacsvsplit[10]}
-        uva=${datacsvsplit[11]}
-        uvb=${datacsvsplit[12]}
-        uvindex=${datacsvsplit[13]}
+        uva=${datacsvsplit[14]}
+        uvb=${datacsvsplit[15]}
+        uvindex=${datacsvsplit[16]}
 
         # Submit all values as one record to InfluxDB
         curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary \
