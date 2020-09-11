@@ -18,10 +18,10 @@ getActiveStandbyState () {
     # run it with an OR conditional so a bad remote command doesn't cause `set` to end the execution
     rawResponse=$(ssh -t -o LogLevel=QUIET root@poorbox.brad "hdparm -C /dev/$1 2>&1") || printf "SSH remote command failure for /dev/$1. "
 
-    # if the response contains "No such file or directory" in the response
+    # If the response contains "No such file or directory" in the response
     # or "missing sense data" the disk isn't installed so we should mark as -1 error.
-    # Else if it contains "active/idle" we shouldmark as 1.
-    # lse if it contains "standby" we should mark 0
+    # Else if it contains "active/idle" we should mark as 1.
+    # Else if it contains "standby" we should mark 0
     # https://stackoverflow.com/questions/229551/how-to-check-if-a-string-contains-a-substring-in-bash
     # https://linuxize.com/post/bash-if-else-statement/
     if [[ $rawResponse == *"No such file or directory"* ]]; then

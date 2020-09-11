@@ -8,19 +8,26 @@
 set -euo pipefail
 
 
-# Run the speedtest using the `speedtest-cli` installed by pip at /opt/rh/rh-python36/root/usr/bin/speedtest-cli
+# Define an array of the speedtest server IDs we want to use, and randomize the order
+# Determine which servers by using `/root/speedtest-cli --list`
+# https://unix.stackexchange.com/questions/124478/how-to-randomize-the-output-from-seq
+speedtestservers=(603 5754 17587 18531)
+shuffledservers=($(printf "%d\n" "${speedtestservers[@]}" | shuf))
+
+# Run the speedtest using the `speedtest-cli` hand-edited in the home dir to remove some XML server lists
+# due to San Francisco servers otherwise missing. Apparently Speedtest changed its XML format in some of
+# the URLs listed to something incompatible. 
 # https://github.com/sivel/speedtest-cli/releases
-# Determine which servers by using `speedtest-cli --list`
-speedtestversion=$(/opt/rh/rh-python36/root/usr/bin/speedtest-cli --version | awk '/speedtest-cli/{print $2}')
-echo "Running speedtest-cli version $speedtestversion which can take ~10s"
-speedtestresult=$(/opt/rh/rh-python36/root/usr/bin/speedtest-cli --simple --server 603 --server 5754 --server 17587 --server 18531)
+speedtestversion=$(/root/speedtest-cli --version | awk '/speedtest-cli/{print $2}')
+echo "Running speedtest-cli version $speedtestversion with random server order ${shuffledservers[@]}. This can take ~10s"
+speedtestresult=$(/root/speedtest-cli --simple --server ${shuffledservers[0]} --server ${shuffledservers[1]} --server ${shuffledservers[2]} --server ${shuffledservers[3]})
 
 # Use `awk` to get the numerical values from the lines
 ping=$(echo "$speedtestresult" | awk '/Ping/{print $2}')
 download=$(echo "$speedtestresult" | awk '/Download/{print $2}')
 upload=$(echo "$speedtestresult" | awk '/Upload/{print $2}')
 
-echo "Ping was $ping ms and download was $download Mbit/s and upload was $upload Mbit/s. Sending to InfluxDB..."
+echo "Ping: $ping ms. DL: $download Mbit/s. UL: $upload Mbit/s. Sending to InfluxDB..."
 
 #Write to the database. Separate calls since each has its own metric value as well as value.
 /usr/bin/curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "speedtest,metric=ping value=$ping"
