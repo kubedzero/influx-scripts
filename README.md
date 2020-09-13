@@ -53,7 +53,7 @@ This repository captures the various scripts used to capture the state of variou
   * installed via pip 
   * It is helpful to format shell script files from the command line. Use with `beautysh esp_influx.sh esxi_influx.sh speedtest_influx.sh supermicro_ipmi_influx.sh unraid_influx.sh ups_influx.sh` to run on multiple files at once
 * `command1 || command2` A double-pipe can follow a known failing command to offer an alternative command that will succeed. If there's a command that consistently throws error codes, https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash 
-  * `rawResponse=$(ssh -t root@poorbox.brad "hdparm -C /dev/sdg") && echo "executing" || echo "executing"` works in the script
+  * `rawResponse=$(ssh -t root@poorbox.brad "hdparm -C /dev/sdg") && echo "executing" || echo "executing"` works in the script. Run it with an OR conditional so a bad remote command doesn't cause `set` to end the execution
 
 
 
@@ -97,6 +97,8 @@ This repository captures the various scripts used to capture the state of variou
 
 * `printf "\nhello\n"` should be used instead of `echo -e "\nhello\n"` as `printf` works more reliably with newline interpretation https://stackoverflow.com/questions/11193466/echo-without-newline-in-a-shell-script
 
+  * https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
+
 * `set -euo pipefail` should be one of the first lines in all scripts, as it will halt the script upon encountering an error https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
 
   * `set -euxo pipefail` can optionally be used to print out each command and its output inside the shell script, which can be helpful for figuring out if everything is iterating or being stored as expected
@@ -124,6 +126,8 @@ This repository captures the various scripts used to capture the state of variou
 
 * `used=$((kmem - freemem))`  or `used=$((used * 100))` or `pcent=$((used / kmem))` shows arithmetic, or addition/subtraction/multiplication/division of numbers and variables can be done within double parentheses
 
+* `if (( $(bc <<< "$currentDataValue < 0.0") )) ; then` is an example of using `bc` to compare floats to integers and possible other stuff. Otherwise, decimal/float values may not be correctly interpreted
+
 * `epochseconds=$(date +%s)` will get the current number of system time seconds since epoch in 1970 
 
   * https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
@@ -135,6 +139,9 @@ This repository captures the various scripts used to capture the state of variou
   * `-v 2c` specifies the SNMP version, which in this case is version 2C
 
 * `ssh -t root@esxi.brad "esxcli storage core device smart get --device-name $datastoreDeviceName"` can be used to execute a command as another user on another host, via SSH.
+
+  * https://www.cyberciti.biz/faq/unix-linux-execute-command-using-ssh/
+  * `rawResponse=$(ssh -t -o LogLevel=QUIET root@poorbox.brad "hdparm -C /dev/$1 2>&1")` we can add `-o LogLevel=QUIET` to remove the `connection to xx.xxx.xx.xxx closed` outputs https://superuser.com/questions/457316/how-to-remove-connection-to-xx-xxx-xx-xxx-closed-message
 
 * While loop iterating over many lines, and an inner IF conditional for a specific line's contents
 
@@ -170,6 +177,9 @@ This repository captures the various scripts used to capture the state of variou
   * No `-`  in the command would result in grabbing a single character
   * `utilVoltage=$(echo "${linesplitdata[$i-1]}" | cut -d' ' -f3 )` would print a line of an array, split on space, and take the field containing the string we want
   * https://unix.stackexchange.com/questions/191122/how-to-split-the-string-after-and-before-the-space-in-shell-script
+  * `cut -d '|' -f2` is an example of cutting on a pipe character and grabbing the second field. Extended, `parsedValue=$(echo "$bulkData" | grep "$1" | cut -d '|' -f2 | tr -d '[:space:]')` will print some data, find a particular line, grab the second field after splitting on pipe, and then delete all instances of space characters
+  * https://stackoverflow.com/questions/9018691/how-to-separate-fields-with-pipe-character-delimiter
+  * https://stackoverflow.com/questions/369758/how-to-trim-whitespace-from-a-bash-variable
 
 * `readarray -t linesplitdata <<<"$bulkData"` splits the data into an array with one line per element
 
@@ -218,6 +228,85 @@ This repository captures the various scripts used to capture the state of variou
 
   * The double square brackets indicate the bounds of what should be evaluated as a conditional, and the semicolon ends that section. 
 
+* `webdata=$(curl --silent "${EspIpArray[$i-1]}" --max-time 5 || true)` to get the contents of a webpage into a variable, in this case it is two lines of CSV data
+
+  * https://stackoverflow.com/questions/3742983/how-to-get-the-contents-of-a-webpage-in-a-shell-variable
+  * `--silent` to hide the download prgress from the output
+  * `--max-time` to time out the operation if the link is down
+  * `|| true` because pipefail -e recognizes curl no response as a failure and will end the script here otherwise https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash 
+
+* Confirm an array is a certain length. If it is not, print an error message and `continue` to skip the current loop
+
+  * ```
+    if [ ! "${#linesplitwebdata[@]}" -eq "2" ]; then
+            # https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
+            # use `echo -e` to interpret newlines rather than just printing \n
+            echo -e "Expected 2 lines of HTTP output, got:" ${#linesplitwebdata[@]} "\n"
+            continue
+        fi
+    ```
+
+  * https://stackoverflow.com/questions/13101621/checking-if-length-of-array-is-equal-to-a-variable-in-bash
+
+  * https://stackoverflow.com/questions/9146136/check-if-file-exists-and-continue-else-exit-in-bash
+
+* `readarray -d , -t headercsvsplit <<<"${linesplitwebdata[0]}"` to specify comma as a delimiter, and then to remove the trailing delimiter, all from a particular array element and into a new array
+
+  * `-d` specifies comma delimiter, `-t` removes trailing delimiter
+  * `-d` introduced in bash 4.4
+
+* `headercsvsplit[$j-1]="$( echo "${headercsvsplit[$j-1]}" | xargs echo -n)"` to give an example of `xargs echo -n` trimming whitespace from a bash variable 
+
+  * https://stackoverflow.com/questions/369758/how-to-trim-whitespace-from-a-bash-variable
+
+* Create a function and return a string value from it. given bulkData + metricName + passback value, retrieves that metric's current value
+
+  * ```
+    getMetricValueFromBulkData () {
+    
+        parsedValue=$(echo "$bulkData" | grep "$1" | cut -d '|' -f2 | tr -d '[:space:]')
+    
+        # set passback value to the parsed value
+        eval "$2=$parsedValue"
+    }
+    ```
+
+  * https://stackoverflow.com/questions/3236871/how-to-return-a-string-value-from-a-bash-function
+
+  * Arguments: `$1` is bulkData, `$2` is metricName, `$3` is passback value
+
+  * A sample call would then be:
+
+  * ```
+    systemTempC="UNFILLED"
+    getMetricValueFromBulkData "System Temp" systemTempC
+    echo "$systemTempC"
+    ```
+
+  * note that the second argument is a reference rather than the value, which is necessary to update the passed-in variable
+
+* `cpuTempC=systemTempC=peripheralTempC="UNFILLED"` to initialize multiple variables at the same time and set them all to the same value, instead of one per line
+
+  * https://www.unix.com/unix-for-dummies-questions-and-answers/123480-initializing-multiple-variables-one-statement.html
+
+* `tr -d '[:space:]'` will delete all instances of space characters from a given input
+
+  * https://superuser.com/questions/537509/nice-commands-in-a-sh-script-for-cron-jobs
+
+* `if [[ $rawResponse == *"No such file or directory"* ]]; then` as an example of checking if a substring exists
+
+  * https://stackoverflow.com/questions/229551/how-to-check-if-a-string-contains-a-substring-in-bash
+
+* `if [ "$2" -gt -1 ]; then` checks that an argument is greater than the integer -1, which we're using in this case to confirm it's not in an error state. 
+
+  * Note that the integer should not be wrapped in quotes
+  * `if (( $(bc <<< "$2 > -1") )) ; then` does the exact same thing
+  * https://www.tldp.org/LDP/abs/html/comparison-ops.html
+
+* `if [ -z "$diskTemp" ]; then` will check if a variable is currently empty
+
+  * https://www.cyberciti.biz/faq/unix-linux-bash-script-check-if-variable-is-empty/
+
 
 
 ## Cron
@@ -230,6 +319,9 @@ This repository captures the various scripts used to capture the state of variou
   * `0,20,40 * * * *` will run a script every 20 minutes
   * `*/2 * * * *` will run a script every 2 minutes
   * `* * * * *` will run a script every minute
+* I found that my speedtest script oftentimes reported slower speeds when running via cron than when I ran it manually. I found https://askubuntu.com/questions/744249/cronjob-under-ubuntu-runs-slow which suggested that Cron was running at a lower priority than my shell. Adding `nice -n 19` to add 19 to the current nice level should in theory mitigate this
+  * https://stackoverflow.com/questions/14371576/nice-command-in-sh-script-for-cron-jobs
+  * http://www.linuxclues.com/articles/15.htm
 
 
 
@@ -265,6 +357,12 @@ I found https://www.cyberpowersystems.com/product/software/power-panel-personal/
 
 * Installed IPMITool with `yum install ipmitool` on CentOS
 * I found that setting up an Administrator user in the IPMI Supermicro web UI and running `ipmitool -H x9srw.brad -U ipminetworkuser -P ipminetworkpass sensor` yielded pipe-character separated columns for each sensor installed. 
+* `bulkData=$(ipmitool -H x9srw.brad -U ipminetworkuser -P ipminetworkpass sensor)` as an example of calling an IPMI tool over the network for read only access
+  * `-H` defines the IP address to connect
+  * `-U` for the user, `-P` for password
+  * `sensor` is one of many options for return data
+  * Output data will be pipe-delimited, also containing whitespace
+  * `/usr/bin/ipmitool` on CentOS, `/usr/local/bin/ipmitool` on macOS
 
 
 
