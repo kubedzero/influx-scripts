@@ -445,5 +445,20 @@ I found https://www.cyberpowersystems.com/product/software/power-panel-personal/
 * Tags are optional parts of data points separate from the data fields themselves and intended to be used for common queries, rather than constantly changing data
   * They are key-value pairs
   * A sensor name, measurement category, or serial number could be a relatively fixed variable stored as a tag. For example, the key might be `hostname` while the value is `nodemcu3`
+  * "In general, fields should not contain commonly-queried metadata." This is according to https://docs.influxdata.com/influxdb/v1.8/concepts/key_concepts/ so this means tags are a better place. 
   * When querying by tag, single quotes must be used. `select * from ups_data where ups = 'cyberpower' and time > now() - 5m  LIMIT 10` will  show data due to the single quotes but `select * from ups_data where ups = "cyberpower" and time > now() - 5m  LIMIT 10` will not, because the tag key `ups`
+  * View what tags are in a series by running `show tag keys from "speedtest"`
+* Fields are the "columns" in the "table" where actual measurement data is stored, such as temperature, CPU, free space, or something else. 
+  * They can be listed along with their data types (float, string, etc) for a particular series by running `show field keys from "speedtest"`
+* Delete Data
+  * https://docs.influxdata.com/influxdb/v1.7/query_language/database_management/ has information
+  * If I added in the wrong timestamp and want to delete data in a series before a certain date, I could say `DELETE FROM "speedtest" WHERE time < '1977-01-01'` or `DELETE FROM "speedtest" WHERE time > now()-30m`
+* Copy or back up a series
+  * `SELECT "metric","value" INTO speedtestnew FROM speedtest`
+  * It could be used to remove a particular field
+  * `SELECT "metric","value" INTO speedtestnew FROM speedtest GROUP BY *` is a better query. https://docs.influxdata.com/influxdb/v1.8/query_language/explore-data/#group-by-tags and https://www.influxdata.com/blog/tldr-influxdb-tech-tips-january-05-2016/ recommend "that you always include `GROUP BY *` in your `INTO` queries as that clause preserves all tags in the original data as tags in the destination data." Otherwise, the tags will be converted to fields and some query possibilities and optimizations may be lost. 
+* Querying
+  * Adding `ORDER BY time DESC` will give us the most recent results first
+  * Adding `LIMIT 10` will limit to 10 results
+  * `select * FROM "diskstats" ORDER BY time DESC LIMIT 10` combines both of these
 
