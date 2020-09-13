@@ -119,8 +119,12 @@ do
         tvoc=${datacsvsplit[17]}
         eco2=${datacsvsplit[18]}
 
+        # Get seconds since Epoch, which is timezone-agnostic
+        # https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
+        epochseconds=$(date +%s)
+
         # Submit all values as one record to InfluxDB
-        curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary \
-            "environment,host=${EspDestArray[$i-1]} humidity=$humidity,temperaturec=$temperaturec,temperaturef=$temperaturef,pressurehg=$pressurehg,pm100=$pm100,pm250=$pm250,pm1000=$pm1000,uva=$uva,uvb=$uvb,uvindex=$uvindex,tvoc=$tvoc,eco2=$eco2"
+        curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary \
+            "environment,host=${EspDestArray[$i-1]} humidity=$humidity,temperaturec=$temperaturec,temperaturef=$temperaturef,pressurehg=$pressurehg,pm100=$pm100,pm250=$pm250,pm1000=$pm1000,uva=$uva,uvb=$uvb,uvindex=$uvindex,tvoc=$tvoc,eco2=$eco2 $epochseconds"
     fi
 done

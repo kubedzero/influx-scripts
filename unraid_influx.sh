@@ -2,7 +2,7 @@
 # NOTE: /bin/sh on macOS, /usr/bin/sh on CentOS
 
 # https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
-set -euxo pipefail
+set -euo pipefail
 
 # Fetch HDD active/standby states, temp, CPU, RAM, and more from unRAID
 
@@ -115,7 +115,11 @@ getDiskTemp "sdf" $sdfActive sdfTempC
 getDiskTemp "sdg" $sdgActive sdgTempC
 getDiskTemp "sdh" $sdhActive sdhTempC
 
+# Get seconds since Epoch, which is timezone-agnostic
+# https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
+epochseconds=$(date +%s)
+
 #Write the data to the database
 echo -e "\n\nPosting data to InfluxDB\n"
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "unraid,host=poorbox,type=diskActive sdaActive=$sdaActive,sdbActive=$sdbActive,sdcActive=$sdcActive,sddActive=$sddActive,sdeActive=$sdeActive,sdfActive=$sdfActive,sdgActive=$sdgActive,sdhActive=$sdhActive"
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "unraid,host=poorbox,type=diskTemp sdaTempC=$sdaTempC,sdbTempC=$sdbTempC,sdcTempC=$sdcTempC,sddTempC=$sddTempC,sdeTempC=$sdeTempC,sdfTempC=$sdfTempC,sdgTempC=$sdgTempC,sdhTempC=$sdhTempC"
+curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "unraid,host=poorbox,type=diskActive sdaActive=$sdaActive,sdbActive=$sdbActive,sdcActive=$sdcActive,sddActive=$sddActive,sdeActive=$sdeActive,sdfActive=$sdfActive,sdgActive=$sdgActive,sdhActive=$sdhActive $epochseconds
+unraid,host=poorbox,type=diskTemp sdaTempC=$sdaTempC,sdbTempC=$sdbTempC,sdcTempC=$sdcTempC,sddTempC=$sddTempC,sdeTempC=$sdeTempC,sdfTempC=$sdfTempC,sdgTempC=$sdgTempC,sdhTempC=$sdhTempC $epochseconds"

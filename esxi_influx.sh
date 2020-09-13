@@ -115,5 +115,9 @@ echo "Memory Used %: $pcent%"
 echo "Memory Used: $used"
 echo -e "Memory Free: $freemem\n"
 
+# Get seconds since Epoch, which is timezone-agnostic
+# https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
+epochseconds=$(date +%s)
+
 # Write the data to the database
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "esxi_stats,host=esxi1,type=memory_usage percent=$pcent,free=$freemem,used=$used"
+curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "esxi_stats,host=esxi1,type=memory_usage percent=$pcent,free=$freemem,used=$used $epochseconds"

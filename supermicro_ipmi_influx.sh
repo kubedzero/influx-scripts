@@ -68,7 +68,11 @@ getMetricValueFromBulkData "FAN3" fan3rpm
 getMetricValueFromBulkData "FAN4" fan4rpm
 getMetricValueFromBulkData "FAN5" fan5rpm
 
+# Get seconds since Epoch, which is timezone-agnostic
+# https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
+epochseconds=$(date +%s)
+
 #Write the data to the database
 echo "\nPosting data to InfluxDB\n"
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "ipmi,host=x9srw,type=temp cpuTempC=$cpuTempC,systemTempC=$systemTempC,peripheralTempC=$peripheralTempC,pchTempC=$pchTempC,dimmA1TempC=$dimmA1TempC,dimmA2TempC=$dimmA2TempC,dimmB1TempC=$dimmB1TempC,dimmB2TempC=$dimmB2TempC,dimmC1TempC=$dimmC1TempC,dimmC2TempC=$dimmC2TempC,dimmD1TempC=$dimmD1TempC,dimmD2TempC=$dimmD2TempC"
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "ipmi,host=x9srw,type=fan fan1rpm=$fan1rpm,fan2rpm=$fan2rpm,fan3rpm=$fan3rpm,fan4rpm=$fan4rpm,fan5rpm=$fan5rpm"
+curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "ipmi,host=x9srw,type=temp cpuTempC=$cpuTempC,systemTempC=$systemTempC,peripheralTempC=$peripheralTempC,pchTempC=$pchTempC,dimmA1TempC=$dimmA1TempC,dimmA2TempC=$dimmA2TempC,dimmB1TempC=$dimmB1TempC,dimmB2TempC=$dimmB2TempC,dimmC1TempC=$dimmC1TempC,dimmC2TempC=$dimmC2TempC,dimmD1TempC=$dimmD1TempC,dimmD2TempC=$dimmD2TempC $epochseconds
+ipmi,host=x9srw,type=fan fan1rpm=$fan1rpm,fan2rpm=$fan2rpm,fan3rpm=$fan3rpm,fan4rpm=$fan4rpm,fan5rpm=$fan5rpm $epochseconds"

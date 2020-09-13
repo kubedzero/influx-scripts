@@ -2,34 +2,35 @@
 # macOS `sh` is located at /bin/sh for 3.2 or /usr/local/bin/bash if installed with Homebrew
 # *nix is /usr/bin/bash but I installed bash 5.0 manually to /usr/local/sbin/bash on CentOS
 
-# This script uses the `speedtest-cli` utility (2.1.2 latest) to calculate internet speeds and send them to InfluxDB
+# This script uses the Ookla official speedtest utility (1.0.0.2 latest) to calculate internet speeds and send them to InfluxDB
 
 # https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
 set -euo pipefail
 
 
-# Define an array of the speedtest server IDs we want to use, and randomize the order
-# Determine which servers by using `/root/speedtest-cli --list`
-# https://unix.stackexchange.com/questions/124478/how-to-randomize-the-output-from-seq
+# Define an array of the speedtest server IDs we want to use, and pick a random one
+# https://www.christianroessler.net/tech/2015/bash-array-random-element.html
 speedtestservers=(603 5754 17587 18531)
-shuffledservers=($(printf "%d\n" "${speedtestservers[@]}" | shuf))
+selectedserver=${speedtestservers[$RANDOM % ${#speedtestservers[@]}]}
 
-# Run the speedtest using the `speedtest-cli` hand-edited in the home dir to remove some XML server lists
-# due to San Francisco servers otherwise missing. Apparently Speedtest changed its XML format in some of
-# the URLs listed to something incompatible. 
-# https://github.com/sivel/speedtest-cli/releases
-speedtestversion=$(/root/speedtest-cli --version | awk '/speedtest-cli/{print $2}')
-echo "Running speedtest-cli version $speedtestversion with random server order ${shuffledservers[@]}. This can take ~10s"
-speedtestresult=$(/root/speedtest-cli --simple --server ${shuffledservers[0]} --server ${shuffledservers[1]} --server ${shuffledservers[2]} --server ${shuffledservers[3]})
+# Run the speedtest https://www.speedtest.net/apps/cli
+# - Use the randomly selected server from the list
+# - Turn precision of speeds to 0 decimal places
+# - Disable progress updates, getting only the final values
+echo "Running speed test, this may take a few seconds..."
+speedtestresult=$(/usr/bin/speedtest --server-id=$selectedserver --precision=0 --progress=no)
 
 # Use `awk` to get the numerical values from the lines
-ping=$(echo "$speedtestresult" | awk '/Ping/{print $2}')
-download=$(echo "$speedtestresult" | awk '/Download/{print $2}')
-upload=$(echo "$speedtestresult" | awk '/Upload/{print $2}')
+ping=$(echo "$speedtestresult" | awk '/Latency/{print $2}')
+download=$(echo "$speedtestresult" | awk '/Download/{print $3}')
+upload=$(echo "$speedtestresult" | awk '/Upload/{print $3}')
 
-echo "Ping: $ping ms. DL: $download Mbit/s. UL: $upload Mbit/s. Sending to InfluxDB..."
+echo "Server ID: $selectedserver. Ping: $ping ms. DL: $download Mbps. UL: $upload Mbps. Sending to InfluxDB..."
 
-#Write to the database. Separate calls since each has its own metric value as well as value.
-/usr/bin/curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "speedtest,metric=ping value=$ping"
-/usr/bin/curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "speedtest,metric=download value=$download"
-/usr/bin/curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "speedtest,metric=upload value=$upload"
+# Get seconds since Epoch, which is timezone-agnostic
+# https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
+epochseconds=$(date +%s)
+
+# Write to the database, including the timestamp for a precision of seconds versus default nanoseconds
+# Store serverID as a tag rather than a field, as we may want to query on it
+/usr/bin/curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "speedtest,serverid=$selectedserver ping=$ping,download=$download,upload=$upload $epochseconds"
