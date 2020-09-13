@@ -73,6 +73,6 @@ getMetricValueFromBulkData "FAN5" fan5rpm
 epochseconds=$(date +%s)
 
 #Write the data to the database
-echo "\nPosting data to InfluxDB\n"
+printf "\nPosting data to InfluxDB\n"
 curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "ipmi,host=x9srw,type=temp cpuTempC=$cpuTempC,systemTempC=$systemTempC,peripheralTempC=$peripheralTempC,pchTempC=$pchTempC,dimmA1TempC=$dimmA1TempC,dimmA2TempC=$dimmA2TempC,dimmB1TempC=$dimmB1TempC,dimmB2TempC=$dimmB2TempC,dimmC1TempC=$dimmC1TempC,dimmC2TempC=$dimmC2TempC,dimmD1TempC=$dimmD1TempC,dimmD2TempC=$dimmD2TempC $epochseconds
 ipmi,host=x9srw,type=fan fan1rpm=$fan1rpm,fan2rpm=$fan2rpm,fan3rpm=$fan3rpm,fan4rpm=$fan4rpm,fan5rpm=$fan5rpm $epochseconds"

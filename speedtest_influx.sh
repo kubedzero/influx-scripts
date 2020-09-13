@@ -18,7 +18,7 @@ selectedserver=${speedtestservers[$RANDOM % ${#speedtestservers[@]}]}
 # - Turn precision of speeds to 0 decimal places
 # - Disable progress updates, getting only the final values
 echo "Running speed test, this may take a few seconds..."
-speedtestresult=$(/usr/bin/speedtest --server-id=$selectedserver --precision=0 --progress=no)
+speedtestresult=$(/usr/bin/speedtest --server-id="$selectedserver" --precision=0 --progress=no)
 
 # Use `awk` to get the numerical values from the lines
 ping=$(echo "$speedtestresult" | awk '/Latency/{print $2}')

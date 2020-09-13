@@ -38,17 +38,17 @@ do
         *"Utility Voltage..."*)
             # https://unix.stackexchange.com/questions/191122/how-to-split-the-string-after-and-before-the-space-in-shell-script
             # print the line, split on space, take the field containing the number
-            utilVoltage=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 ) ;;
+            utilVoltage=$(echo "${linesplitdata[$i-1]}" | cut -d' ' -f3 ) ;;
         *"Output Voltage..."*)
-            outputVoltage=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 ) ;;
+            outputVoltage=$(echo "${linesplitdata[$i-1]}" | cut -d' ' -f3 ) ;;
         *"Battery Capacity..."*)
-            batteryCapacity=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 ) ;;
+            batteryCapacity=$(echo "${linesplitdata[$i-1]}" | cut -d' ' -f3 ) ;;
         *"Remaining Runtime..."*)
-            remainingRuntime=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 ) ;;
+            remainingRuntime=$(echo "${linesplitdata[$i-1]}" | cut -d' ' -f3 ) ;;
         *"Load..."*)
-            loadWatts=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f2 )
+            loadWatts=$(echo "${linesplitdata[$i-1]}" | cut -d' ' -f2 )
             # isolate the second number in the line by splitting and splitting again
-            loadPercent=$(echo ${linesplitdata[$i-1]} | cut -d' ' -f3 | cut -d'(' -f2) ;;
+            loadPercent=$(echo "${linesplitdata[$i-1]}" | cut -d' ' -f3 | cut -d'(' -f2) ;;
     esac
 done
 

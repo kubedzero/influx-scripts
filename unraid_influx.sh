@@ -52,7 +52,7 @@ getDiskTemp () {
     # https://www.tldp.org/LDP/abs/html/comparison-ops.html
     # Only process if the status code is not in an error state, aka 0 or 1. Don't wrap integer in quotes
     # Can also do if (( $(bc <<< "$2 > -1") )) ; then
-    if [ $2 -gt -1 ]; then
+    if [ "$2" -gt -1 ]; then
 
         # https://www.cyberciti.biz/faq/unix-linux-execute-command-using-ssh/
         # https://superuser.com/questions/457316/how-to-remove-connection-to-xx-xxx-xx-xxx-closed-message
@@ -106,14 +106,14 @@ sdaTempC=sdbTempC=sdcTempC=sddTempC=sdeTempC=sdfTempC=sdgTempC=sdhTempC="UNFILLE
 
 # Fetch HDD states with passwordless SSH executing smartctl
 echo -e "\n\nGetting Disk Temperatures"
-getDiskTemp "sda" $sdaActive sdaTempC
-getDiskTemp "sdb" $sdbActive sdbTempC
-getDiskTemp "sdc" $sdcActive sdcTempC
-getDiskTemp "sdd" $sddActive sddTempC
-getDiskTemp "sde" $sdeActive sdeTempC
-getDiskTemp "sdf" $sdfActive sdfTempC
-getDiskTemp "sdg" $sdgActive sdgTempC
-getDiskTemp "sdh" $sdhActive sdhTempC
+getDiskTemp "sda" "$sdaActive" sdaTempC
+getDiskTemp "sdb" "$sdbActive" sdbTempC
+getDiskTemp "sdc" "$sdcActive" sdcTempC
+getDiskTemp "sdd" "$sddActive" sddTempC
+getDiskTemp "sde" "$sdeActive" sdeTempC
+getDiskTemp "sdf" "$sdfActive" sdfTempC
+getDiskTemp "sdg" "$sdgActive" sdgTempC
+getDiskTemp "sdh" "$sdhActive" sdhTempC
 
 # Get seconds since Epoch, which is timezone-agnostic
 # https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash

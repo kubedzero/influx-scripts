@@ -29,15 +29,15 @@ declare -a EspDestArray=(
 arraylength=${#EspIpArray[@]}
 
 # use for loop to read all values and indexes
-for (( i=1; i<${arraylength}+1; i++ ));
+for (( i=1; i<arraylength+1; i++ ));
 do
-    echo $i "/" ${arraylength} ":" ${EspIpArray[$i-1]} "to" ${EspDestArray[$i-1]}
+    echo "$i" "/" "${arraylength}" ":" "${EspIpArray[$i-1]}" "to" "${EspDestArray[$i-1]}"
     # https://stackoverflow.com/questions/3742983/how-to-get-the-contents-of-a-webpage-in-a-shell-variable
     # --silent to hide the download prgress from the output
     # https://unix.stackexchange.com/questions/94604/does-curl-have-a-timeout/94612
     # --max-time to time out the operation if the link is down
     # || true because pipefail -e recognizes curl no response as a failure and will end the script here otherwise
-    webdata=$(curl --silent ${EspIpArray[$i-1]} --max-time 5 || true)
+    webdata=$(curl --silent "${EspIpArray[$i-1]}" --max-time 5 || true)
     # echo $webdata
     # Bash 4 support required for readarray -t y <<<"$webdata".
     readarray -t linesplitwebdata <<<"$webdata"
@@ -65,30 +65,30 @@ do
     #printf '%s\n' "${datacsvsplit[@]}"
 
     # use for loop to read all names and values
-    for (( j=1; j<${innerArrayLength}+1; j++ ));
+    for (( j=1; j<innerArrayLength+1; j++ ));
     do
         # trim whitespace https://stackoverflow.com/questions/369758/how-to-trim-whitespace-from-a-bash-variable
-        headercsvsplit[$j-1]="$( echo ${headercsvsplit[$j-1]} | xargs echo -n)"
-        datacsvsplit[$j-1]="$( echo ${datacsvsplit[$j-1]} | xargs echo -n)"
+        headercsvsplit[$j-1]="$( echo "${headercsvsplit[$j-1]}" | xargs echo -n)"
+        datacsvsplit[$j-1]="$( echo "${datacsvsplit[$j-1]}" | xargs echo -n)"
 
         currentHeaderValue=${headercsvsplit[$j-1]}
         currentDataValue=${datacsvsplit[$j-1]}
 
-        echo $j "/" ${innerArrayLength} ": header" $currentHeaderValue "value" $currentDataValue
+        echo "$j" "/" "${innerArrayLength}" ": header" "$currentHeaderValue" "value" "$currentDataValue"
 
         # check that contents is numeric and above zero
         if [ "$currentDataValue" = "nan" ]; then
-            echo "NAN value found for header:" $currentHeaderValue
+            echo "NAN value found for header:" "$currentHeaderValue"
             #areanynan=true
         fi
 
         if [ "$currentDataValue" = "inf" ]; then
-            echo "INF value found for header:" $currentHeaderValue
+            echo "INF value found for header:" "$currentHeaderValue"
             # areanyinf=true
         fi
 
         if (( $(bc <<< "$currentDataValue < 0.0") )) ; then
-            echo "Subzero value found for header:" $currentHeaderValue "value" $currentDataValue
+            echo "Subzero value found for header:" "$currentHeaderValue" "value" "$currentDataValue"
             areanynegative=true
         fi
     done
