@@ -1,85 +1,248 @@
+# README
+
+This repository captures the various scripts used to capture the state of various appliances on the network and report them to InfluxDB. 
+
+
+
+## Bash Versions
+
+* Bash 3.x or 4.x is commonly installed by default, but one of the utilities I wanted to use, `readarray -d` is only available in newer versions.
+
 * https://itnext.io/upgrading-bash-on-macos-7138bd1066ba explains why Bash 3.2 is still on macOS and how to get Bash 4 with Homebrew
-* https://www.shellcheck.net/ can offer suggestions to do shell scripting better
-* https://github.com/lovesegfault/beautysh installed via pip is helpful to format shell script files from the command line. Use with `beautysh file1.sh` to run
-* Installed Bash 5 on macOS which had readarray -d but Bash 4.2 on CentOS did not have it. Updating to bash 5 with https://www.ramoonus.nl/2019/01/08/bash-5-0-installation-for-linux/ and then changing line1 to point to the compiled version
-* https://apple.stackexchange.com/questions/55989/change-my-shell-to-a-different-bash-version-at-usr-local-bin-bash change the default shell per username by editing `/etc/shells` and then running `chsh -s /usr/local/bin/bash username` to set the version you want for your username.
-```
-[user@localhost ~]# cat /etc/shells 
-/bin/sh
-/bin/bash
-/usr/bin/sh
-/usr/bin/bash
-[user@localhost ~]# echo /usr/local/sbin/bash >> /etc/shells
-[user@localhost ~]# chsh -s /usr/local/sbin/bash user
-Changing shell for user.
-Shell changed.
-```
 
+  * https://apple.stackexchange.com/questions/55989/change-my-shell-to-a-different-bash-version-at-usr-local-bin-bash change the default shell per username by editing `/etc/shells` and then running `chsh -s /usr/local/bin/bash username` to set the version you want for your username.
 
-### Speedtest
-`speedtest-cli --list` from https://github.com/sivel/speedtest-cli/releases yields the following top results for a San Francisco IP
-```
-Retrieving speedtest.net configuration...
- 5026) AT&T (San Francisco, CA, United States) [1.20 km]
-  603) Unwired (San Francisco, CA, United States) [1.20 km]
- 5754) Fastmetrics Inc. (San Francisco, CA, United States) [1.20 km]
- 1783) Comcast (San Francisco, CA, United States) [1.20 km]
-17587) Wiline Networks (San Francisco, CA, United States) [1.20 km]
-18531) Wave (San Francisco, CA, United States) [1.20 km]
- 8228) Race Communications (San Francisco, CA, United States) [1.20 km]
-```
+  * ```
+    [user@localhost ~]# cat /etc/shells 
+    /bin/sh
+    /bin/bash
+    /usr/bin/sh
+    /usr/bin/bash
+    [user@localhost ~]# echo /usr/local/sbin/bash >> /etc/shells
+    [user@localhost ~]# chsh -s /usr/local/sbin/bash user
+    Changing shell for user.
+    Shell changed.
+    ```
 
-The ID can then be used to identify which server to test against
-`speedtest-cli --server 5026` over the following servers yielded these rough results:
+* https://www.ramoonus.nl/2019/01/08/bash-5-0-installation-for-linux/ has instructions for installing Bash 5.x on Linux
 
-*  5026) AT&T - 400 down 600 up 10ms ping
-*   603) Unwired - 824 down 900 up 10ms ping
-*  5754) Fastmetrics Inc. - 842 down 834 up 4ms ping
-*  1783) Comcast - 663 down 730 up 6ms ping
-* 17587) Wiline Networks - 760 down 900 up 7ms
-* 18531) Wave - 818 down 741 up 4ms
-*  8228) Race Communications - 470 down 430 up 17ms ping
+  * ```
+    sudo yum groupinstall "Development Tools" "Legacy Software Development"
+    wget http://ftp.gnu.org/gnu/bash/bash-5.0.tar.gz
+    tar xf bash-5.0.tar.gz
+    cd bash-5.0
+    ./configure
+    make
+    sudo make install
+    sh
+    ```
 
+* DEFAULT: CentOS has Bash installed at `/usr/bin/sh` while macOS has it installed at `/bin/sh`
 
-With this list we can then make an exclusion based or an inclusion based list to test against:
-
-* (recommended) `speedtest-cli --server 603 --server 5754 --server 17587 --server 18531`
-* `speedtest-cli --exclude 5026 --exclude 1783 --exclude 8228`
-
-`speedtest-cli --simple` removes the "testing from IP address" and selected server information, yielding just the following:
-
-```
-Ping: 5.658 ms
-Download: 792.40 Mbit/s
-Upload: 679.89 Mbit/s
-```
-
-It can also output in CSV format, which is friendlier to parse with `readarray`
-`speedtest-cli --csv` yields `5754,Fastmetrics Inc.,"San Francisco, CA",2019-09-30T02:03:33.370153Z,1.2028609595919466,5.422,294294532.37465966,211767289.37021893,,136.24.206.17` and we know the schema from running `speedtest-cli --csv-header` which yields `Server ID,Sponsor,Server Name,Timestamp,Distance,Ping,Download,Upload,Share,IP Address`
-
-* Print array https://stackoverflow.com/questions/15691942/print-array-elements-on-separate-lines-in-bash with `printf '%s\n' "${my_array[@]}"`
+* NEW: CentOS has updated Bash installed at `/usr/local/sbin/bash` while macOS has it at `/usr/local/bin/bash` when installed via Homebrew
 
 
 
-* The simplest method is to just use the `--simple` printout and then using `awk` to fetch the value from each line that we want. 
+## Shell Scripts
+
+* Most of my scripts are done entirely using Bash/CLI commands, as opposed to writing Python, Perl, PHP, or other scripts. 
+* https://www.shellcheck.net/ can offer suggestions on optimizing or bug fixing shell scripts
+  * For example, it corrected `speedtestresult=$(/usr/bin/speedtest --server-id=$selectedserver --precision=0 --progress=no)` to `speedtestresult=$(/usr/bin/speedtest --server-id="$selectedserver" --precision=0 --progress=no)`, wrapping in a "Double quote to prevent globbing and word splitting"
+  * https://github.com/koalaman/shellcheck/wiki/SC2004 is another error, showing `echo $(($n + ${arr[i]}))` can be replaced by `echo $((n + arr[i]))` because "The `$` or `${..}` on regular variables in arithmetic contexts is unnecessary"
+* https://github.com/lovesegfault/beautysh 
+  * installed via pip 
+  * It is helpful to format shell script files from the command line. Use with `beautysh esp_influx.sh esxi_influx.sh speedtest_influx.sh supermicro_ipmi_influx.sh unraid_influx.sh ups_influx.sh` to run on multiple files at once
+* `command1 || command2` A double-pipe can follow a known failing command to offer an alternative command that will succeed. If there's a command that consistently throws error codes, https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash 
+  * `rawResponse=$(ssh -t root@poorbox.brad "hdparm -C /dev/sdg") && echo "executing" || echo "executing"` works in the script
 
 
 
-### Cyberpower CP1350PFCLCD Read Data
+## Pip
 
-The CentOS VMs for PowerPanel Business edition Local/Agent sometimes presenst connection refused messages, or doesn't start up. All I really want to do is scrape the data and I found https://www.cyberpowersystems.com/product/software/power-panel-personal/powerpanel-for-linux/ which allows a utility like `pwrstat -status` to print out the following:
+* Package installer for Python
+
+* https://pip.pypa.io/en/stable/
+
+* Installation instructions are at https://pip.pypa.io/en/stable/installing/
+
+* Alternative install is to install Python with Homebrew, as per https://docs.python-guide.org/starting/install3/osx/ `brew install python`
+
+  * ```
+    Python has been installed as
+      /usr/local/bin/python3
+    
+    Unversioned symlinks `python`, `python-config`, `pip` etc. pointing to
+    `python3`, `python3-config`, `pip3` etc., respectively, have been installed into
+      /usr/local/opt/python@3.8/libexec/bin
+    
+    You can install Python packages with
+      pip3 install <package>
+    They will install into the site-package directory
+      /usr/local/lib/python3.8/site-packages
+    ```
+
+  * Note that I'll then have to add `/usr/local/opt/python@3.8/libexec/bin` to the PATH if I want to reference using unversioned names. 
 
 
 
-```
-The UPS information shows as following:
+## Bash Tricks
+
+* `printf '%s\n' "${my_array[@]}"` to print array elements on separate lines https://stackoverflow.com/questions/15691942/print-array-elements-on-separate-lines-in-bash 
+
+*  `echo $?` to get the exit code integer of the last-run command https://www.cyberciti.biz/faq/bash-get-exit-code-of-command/
+
+  * 0 is no issue, anything else is an error
+
+*  `tr -d '\r'` can remove carriage returns that otherwise result in weird parsing https://stackoverflow.com/questions/800030/remove-carriage-return-in-unix
+
+* `printf "\nhello\n"` should be used instead of `echo -e "\nhello\n"` as `printf` works more reliably with newline interpretation https://stackoverflow.com/questions/11193466/echo-without-newline-in-a-shell-script
+
+* `set -euo pipefail` should be one of the first lines in all scripts, as it will halt the script upon encountering an error https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
+
+  * `set -euxo pipefail` can optionally be used to print out each command and its output inside the shell script, which can be helpful for figuring out if everything is iterating or being stored as expected
+
+* `speedtestservers=(603 5754 17587 18531)` define an array of numbers and then get a single random element from that array with `selectedserver=${speedtestservers[$RANDOM % ${#speedtestservers[@]}]}`
+
+  * `$RANDOM` will return a random number every time, `%` is modulo, and `${#speedtestservers[@]}` will return the number of elements in the array
+  * https://www.christianroessler.net/tech/2015/bash-array-random-element.html
+  * Or get a specific one with `driveTempC=${driveTempArr[2]}`
+
+* `ping=$(echo "$speedtestresult" | awk '/Latency/{print $2}')` Given a multi-line input, piping it to `awk`, regex matching on a string "Latency" and then pulling the third element out of that line (zero-indexed)
+
+* Another way of declaring an array of strings, even allowing it to be spread across lines!
+
+  * ```
+    declare -a EspDestArray=(
+        "nodemcu1"
+        "nodemcu2"
+        "nodemcu3"
+        "nodemcu4"
+    )
+    ```
+
+  * https://linuxhint.com/bash_loop_list_strings/
+
+* `used=$((kmem - freemem))`  or `used=$((used * 100))` or `pcent=$((used / kmem))` shows arithmetic, or addition/subtraction/multiplication/division of numbers and variables can be done within double parentheses
+
+* `epochseconds=$(date +%s)` will get the current number of system time seconds since epoch in 1970 
+
+  * https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
+  * `date +%s%N` gives nanoseconds, meaning `echo $(($(date +%s%N)/1000000))` could give milliseconds and `echo $(($(date +%s%N)/1000))` could give microseconds
+
+* `bulkData=$(snmpwalk -m ALL -c public -v 2c esxi.brad)` can be used to call an IP address and fetch all possible SNMP data.  
+
+  * `-c` specifies the "community" which in this case is `public`
+  * `-v 2c` specifies the SNMP version, which in this case is version 2C
+
+* `ssh -t root@esxi.brad "esxcli storage core device smart get --device-name $datastoreDeviceName"` can be used to execute a command as another user on another host, via SSH.
+
+* While loop iterating over many lines, and an inner IF conditional for a specific line's contents
+
+  * ```
+    while read -r line; do
+        # Check if the line contains the string
+        if [[ $line == *"Drive Temperature"* ]]
+        then
+            driveTemp=$line
+        fi
+    done <<< "$hwinfo"
+    ```
+
+  * `hwinfo` is sent into the while loop on the last line using `<<<` and each iteration of the loop calls `read -r` on the input, setting the current line to the variable `line`
+
+  * `if [[ $line == *"Drive Temperature"* ]]` is checking the current line's contents to see if the string "Drive Temperature" shows up anywhere. `*` characters before and after mean any characters can come before or after. 
+
+* `singleSpaced=$(echo $manySpaced | tr -s ' ')` can reformat a string to remove or "squeeze" consecutive instances of a character into only one instance. 
+
+  * `-s ' '` and `--squeeze-repeats ' '` are identical in operation
+  * `Drive Temperature         43     81         N/A    N/A` would be squeezed to `'Drive Temperature 43 81 N/A N/A'`
+  * https://unix.stackexchange.com/questions/109835/how-do-i-use-cut-to-separate-by-multiple-whitespace
+  * `tr --squeeze-repeats '[.]'` note the extra square brackets would be needed to denote a period, since a period is a special regex character otherwise
+
+* `IFS=' ' read -ra driveTempArr <<< "$driveTemp"` can take a single-spaced string as input and convert it to an array, where the delimiter is a space
+
+  * We can then fetch a specific item from that array using zero-indexing `driveTempC=${driveTempArr[2]}`
+  * `IFS='.' read -ra kmemarr <<< "$kmemline"` would break apart on a period instead of a space
+
+* `cpu5=$(echo "$bulkData" | cut -c 50-)` the `cut` command can be used to chop off bits of a string
+
+  * In this case, chop off the first 49 bytes of the line, leaving the string of the 50th character to the end (as defined by the `-`)
+  * No `-`  in the command would result in grabbing a single character
+  * `utilVoltage=$(echo "${linesplitdata[$i-1]}" | cut -d' ' -f3 )` would print a line of an array, split on space, and take the field containing the string we want
+  * https://unix.stackexchange.com/questions/191122/how-to-split-the-string-after-and-before-the-space-in-shell-script
+
+* `readarray -t linesplitdata <<<"$bulkData"` splits the data into an array with one line per element
+
+  * Bash 4 is the first version to support this
+
+* Looping over an array of strings
+
+  * https://stackoverflow.com/questions/8880603/loop-through-an-array-of-strings-in-bash
+
+  * ```
+    for (( i=1; i<${arraylength}+1; i++ ));
+    do
+        echo ${linesplitdata[$i-1]}
+    done
+    ```
+
+* Case/switch statement based on an input string and "does the input contain any of these case strings"
+
+  * ```
+        case ${linesplitdata[$i-1]} in
+            *"Battery Capacity..."*)
+                batteryCapacity=$(echo "${linesplitdata[$i-1]}" | cut -d' ' -f3 ) ;;
+            *"Load..."*)
+                loadWatts=$(echo "${linesplitdata[$i-1]}" | cut -d' ' -f2 )
+                loadPercent=$(echo "${linesplitdata[$i-1]}" | cut -d' ' -f3 | cut -d'(' -f2) ;;
+        esac
+    ```
+
+  * https://stackoverflow.com/questions/22712156/bash-if-string-contains-in-case-statement
+
+  * Double semicolons note the end of a particular switch case, and `esac` notes the end of the switch statement
+
+  * NOTE: Ignore the `*"Load..."*)` weird format, it's trying to match based on a parenthesis ending the line, and that is not key to the switch case working. 
+
+* If Conditional
+
+  * ```
+    if [[ $utilVoltage != "UNFILLED" || $loadPercent != "UNFILLED" ]]; then
+        echo "Success!"
+    else
+        echo "Failure."
+    fi
+    ```
+
+  * double pipes act as OR conditionals here, meaning if any one of these matches the string `UNFILLED` then it will evaluate false/failure
+
+  * The double square brackets indicate the bounds of what should be evaluated as a conditional, and the semicolon ends that section. 
+
+
+
+## Cron
+
+* We want to collect data on a regular basis, so using Cron and Crontab to periodically run the scripts is the best way of going about it. 
+* `crontab -e` will open Cron for editing in Vim. 
+  * As usual with Vim, `ESC` will be used to enter commands, `i` will be used to start inserting data, and then using `wq!` will write the changes and quit, forcefully. Cron will then be updated. 
+* `crontab -l` will show all the currently configured cron jobs
+* Scheduling
+  * `0,20,40 * * * *` will run a script every 20 minutes
+  * `*/2 * * * *` will run a script every 2 minutes
+  * `* * * * *` will run a script every minute
+
+
+
+## Cyberpower CP1350PFCLCD Read Data
+
+I found https://www.cyberpowersystems.com/product/software/power-panel-personal/powerpanel-for-linux/ which allows a utility like `pwrstat -status` to print out the following:
 
 	Properties:
 		Model Name................... CP1350PFCLCD
 		Firmware Number.............. CRCA102-3I1
 		Rating Voltage............... 120 V
 		Rating Power................. 810 Watt
-
+	
 	Current UPS status:
 		State........................ Normal
 		Power Supply by.............. Utility Power
@@ -92,59 +255,34 @@ The UPS information shows as following:
 		Test Result.................. Unknown
 		Last Power Event............. None
 
-```
-
-
-
-There! That gives me voltage, capacity, load, everything I want. It's easy to install on CentOS too.
-
-
-
-* Get `wget` with `sudo yum install wget -y` and then copy link from the above page for 32 or 64 bit depending on your CentOS version. It may look similar to `wget https://dl4jz3rbrsfum.cloudfront.net/software/powerpanel-132-0x86_64.rpm`
+* Install `wget` first on CentOS with `sudo yum install wget -y` and then copy link from the above page for 32 or 64 bit depending on your CentOS version. It may look similar to `wget https://dl4jz3rbrsfum.cloudfront.net/software/powerpanel-132-0x86_64.rpm`
 * Then install the utility with `yum install powerpanel-132-0x86_64.rpm  -y`
-* The utility `pwrstat` should then be installed.  
-
-
-
-Interestingly when running `influx` to check on the data I found the following:
-
-
-
-```
-> select * from ups_data where ups = "cyberpower" and time > now() - 5m  LIMIT 10
-> select * from ups_data where ups = 'cyberpower' and time > now() - 5m  LIMIT 10
-name: ups_data
-time                batteryCapacity denhost1.value host loadPercent loadWatts outputVoltage remainingRuntime sensor ups        utilVoltage
-----                --------------- -------------- ---- ----------- --------- ------------- ---------------- ------ ---        -----------
-1571465909800900133 100                                 20          162       123           34                      cyberpower 123
-> exit
-
-```
-
-Wrapping the search string in double quotes didn't allow data to be found, but single quotes was fine. 
+* The utility `pwrstat` should then be installed.  I confirmed I have 1.3.2 installed currently by running `pwrstat -version`
 
 
 
 ## IPMI ESXi sensor readings
 
 * Installed IPMITool with `yum install ipmitool` on CentOS
-* I found setting up an Administrator user in the IPMI Supermicro web UI and running `ipmitool -H x9srw.brad -U ipminetworkuser -P ipminetworkpass sensor` yielded pipe-character separated columns for each sensor installed. 
-* https://linuxize.com/post/bash-functions/ shows how to define a function, no input variables need to be explicitly defined and instead are just accessible with `$1` indexed values
-* SCP'd it over to the server and ran `crontab -e` and then added the line `\* * * * * /root/supermicro_ipmi_influx.sh` to get it running every minute
+* I found that setting up an Administrator user in the IPMI Supermicro web UI and running `ipmitool -H x9srw.brad -U ipminetworkuser -P ipminetworkpass sensor` yielded pipe-character separated columns for each sensor installed. 
 
 
 
-## UnRAID Hard drive and System readings
+## Unraid HDD and system readings
 
-* I want to get HDD active/standby state, temperature, CPU usage, RAM usage, and array free space
+* Requires passwordless SSH to be set up, so logging in doesn't need to be interactive
 
-* I want to run the script on CentOS rather than having it run from UnRAID and post data from there. 
+  * https://forums.unraid.net/topic/51160-passwordless-ssh-login/ has notes on passwordless SSH setup for Unraid specifically. Unraid is special because it creates an OS in RAM off files on a USB drive, so persistent setup can be difficult
 
-* https://forums.unraid.net/topic/51160-passwordless-ssh-login/ has notes on passwordless SSH setup for unRAID specifically
+  * SSH key exists on my script-executing host at `/root/.ssh/id_rsa.pub` 
 
-  * SSH key exists on my script-executing host at `/root/.ssh/id_rsa.pub` (if not follow https://linuxize.com/post/how-to-setup-passwordless-ssh-login/ or https://www.tecmint.com/ssh-passwordless-login-using-ssh-keygen-in-5-easy-steps/ and run `ssh-keygen -t rsa` to generate that file)
+    * https://linuxize.com/post/how-to-setup-passwordless-ssh-login/
+    * https://www.tecmint.com/ssh-passwordless-login-using-ssh-keygen-in-5-easy-steps/
+    * run `ssh-keygen -t rsa` to generate that file
 
-  * Technically the preinstalled command `ssh-copy-id root@poorbox.brad` will work. In the background, it is doing `cat ~/.ssh/id_rsa.pub | ssh remote_username@server_ip_address "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"` all in one to create the ssh directory and authorized_keys file and then add your key to it and chmod everything to have the right permissions.
+  * Technically, the preinstalled command `ssh-copy-id root@poorbox.brad` will work
+
+  * In the background, it is doing `cat ~/.ssh/id_rsa.pub | ssh remote_username@server_ip_address "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"` all in one to create the ssh directory and authorized_keys file and then add your key to it and chmod everything to have the right permissions.
 
   * ```
     [root@grafana ~]# ssh-copy-id root@poorbox.brad
@@ -159,30 +297,55 @@ Wrapping the search string in double quotes didn't allow data to be found, but s
     and check to make sure that only the key(s) you wanted were added.
     ```
 
-  * We note that on the unRAID side in the `/root/.ssh/authorized_keys` file we see `ssh-rsa <abbreviated-public-key> root@centOS-VM` and if we change the DNS name or IP of the originating SSH connection, this may not work. I experimented by changing it to another valid name + a different IP and those both seemed to work, so maybe we're lucky or maybe it just needs to be restarted.
+  * We can validate that on the Unraid side, in the `/root/.ssh/authorized_keys` file we see `ssh-rsa <abbreviated-public-key> root@centOS-VM` and if we change the DNS name or IP of the originating SSH connection, this may not work. I experimented by changing it to another valid name + a different IP and those both seemed to work, so maybe we're lucky or maybe it just needs to be restarted.
 
-  * unRAID is special though in that it stores all persistent data in `/boot` and recreates the `/root` directory on each boot, meaning we'll have to recreate the `authorized_keys` file each time we boot unRAID. The thread https://forums.unraid.net/topic/51160-passwordless-ssh-login/ has a bunch of different suggestions, and the more typical suggestion is to make a custom script that does the above copying and chmodding and then add that script to the `/boot/config/go` file to be executed at startup. The thread also mentions that the `ssh` plugin is preinstalled and has some default behavior, so I want to try that. Another place that's mentioned is https://www.reddit.com/r/unRAID/comments/dlo9r6/help_with_persistent_ssh_on_unraid/f4u4s5q/ saying "For this reason I use the SSH plugin from docgyver which can be found in a Community Applications search. After you install that place your public key in this location /boot/config/plugins/ssh/<user>/.ssh/authorized_keys ."
+  * unRAID is special though in that it stores all persistent data in `/boot` and recreates the `/root` directory on each boot, meaning we'll have to recreate the `authorized_keys` file each time we boot unRAID.
 
-  * Turns out an extra plugin is needed for that automatic setup. However, that thread yielded `install -d -m700 /root/.ssh install -m600 /boot/config-user/ssh/authorized_keys /root/.ssh/` which I can then modify and add to my own go file, I believe. `cp /root/.ssh/authorized_keys /boot/config/ssh/authorized_keys`  (found out `install` is meant for multiple files and therefore doesn't do renaming) and then add the following to `/boot/config/go` in two separate lines:`install -d -m700 /root/.ssh` and then `install -m600 /boot/config/ssh/authorized_keys /root/.ssh/`
+    * The thread https://forums.unraid.net/topic/51160-passwordless-ssh-login/ has a bunch of different suggestions, and the more typical suggestion is to make a custom script that does the above copying and chmodding and then add that script to the `/boot/config/go` file to be executed at startup.
+    * The thread also mentions that the `ssh` plugin is preinstalled and has some default behavior, so I want to try that.
+    * Another place that's mentioned is https://www.reddit.com/r/unRAID/comments/dlo9r6/help_with_persistent_ssh_on_unraid/f4u4s5q/ saying "For this reason I use the SSH plugin from `docgyver` which can be found in a Community Applications search. After you install that, place your public key in this location: `/boot/config/plugins/ssh/<user>/.ssh/authorized_keys`"
+    * that thread yielded `install -d -m700 /root/.ssh install -m600 /boot/config-user/ssh/authorized_keys /root/.ssh/` which I can then modify and add to my own go file, I believe.
+    * `cp /root/.ssh/authorized_keys /boot/config/ssh/authorized_keys`  to get the temporary file to a permanent home on the /boot USB memory
+    * I found out `install` is meant for multiple files and therefore doesn't do renaming. Anyway, then add the following to `/boot/config/go` in two separate lines:`install -d -m700 /root/.ssh` and then `install -m600 /boot/config/ssh/authorized_keys /root/.ssh/`
+    * After that, running SSH from my script-running host works fine
 
-  * After that, running SSH from my script-running host works fine
+* Found an issue. Trying to call `rawResponse=$(ssh -t root@poorbox.brad "hdparm -C /dev/sdg")` in the code would exit the script before continuing. This is due to `set -e` being used and `ssh -t root@poorbox.brad "hdparm -C /dev/sdg"` returning exit status 2 rather than 0 as it should. Exit status 2 means misuse of a command, probably because it's an empty response. I was able to find this out because `echo $?` returns the last exit code
 
-  * Found an issue. Trying to call `rawResponse=$(ssh -t root@poorbox.brad "hdparm -C /dev/sdg")` in the code would exit the script before continuing. This is due to `set -e` being used and `ssh -t root@poorbox.brad "hdparm -C /dev/sdg"` returning exit status 2 rather than 0 as it should. Exit status 2 means misuse of a command, probably because it's an empty response. I was able to find this out because `echo $?` returns the last exit code
+  * https://www.cyberciti.biz/faq/bash-get-exit-code-of-command/
+  * https://unix.stackexchange.com/questions/279777/how-to-catch-and-handle-nonzero-exit-status-within-a-bash-function
+  * I actually ended up finding that `rawResponse=$(ssh -t root@poorbox.brad "hdparm -C /dev/sdg") && echo "executing" || echo "executing"` returns exit code 0 so maybe this will work.  https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash
+  * https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash proposed another method of using `set +e` to turn off error handling before and then `set -e` turning it back on after. I didn't end up doing this though. 
 
-    * https://www.cyberciti.biz/faq/bash-get-exit-code-of-command/
-    * https://unix.stackexchange.com/questions/279777/how-to-catch-and-handle-nonzero-exit-status-within-a-bash-function
-    * I actually ended up finding that `rawResponse=$(ssh -t root@poorbox.brad "hdparm -C /dev/sdg") && echo "executing" || echo "executing"` returns exit code 0 so maybe this will work.  https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash
-    * https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash proposed another method of using `set +e` to turn off error handling before and then `set -e` turning it back on after.
+* I had another issue where parsing the SMART status with `diskTemp=$(echo "$rawResponse" | grep "Temperature" | tr --squeeze-repeats '[:space:]' | cut -d ' ' -f10 | tr -d '\n')` and then trying to print it `echo "x $diskTemp y"` would leave weird output ` y35`
 
-  * I had another issue where parsing the SMART status with `diskTemp=$(echo "$rawResponse" | grep "Temperature" | tr --squeeze-repeats '[:space:]' | cut -d ' ' -f10 | tr -d '\n')` and then trying to print it `echo "x $diskTemp y"` would leave weird output ` y35`
+  * https://www.unix.com/shell-programming-and-scripting/146992-how-see-hidden-characters.html shows how to print normally invisible characters so I could see what was happening, turns out there's the ^M character when I run `echo "x $diskTemp y" | cat -v` I get `x 35^M y`
+  * https://unix.stackexchange.com/questions/134695/what-is-the-m-character-called it's a carriage return so adding a final `tr -d '\r'` got it removed https://stackoverflow.com/questions/800030/remove-carriage-return-in-unix
 
-    * https://www.unix.com/shell-programming-and-scripting/146992-how-see-hidden-characters.html shows how to print normally invisible characters so I could see what was happening, turns out there's the ^M character when I run `echo "x $diskTemp y" | cat -v` I get `x 35^M y`
-    * https://unix.stackexchange.com/questions/134695/what-is-the-m-character-called it's a carriage return so adding a final `tr -d '\r'` got it removed https://stackoverflow.com/questions/800030/remove-carriage-return-in-unix
+* Another bug: I found that the `SG_IO: bad/missing sense data, sb[]: 70 ` line of the output when running `rawResponse=$(ssh -t -o LogLevel=QUIET root@poorbox.brad "hdparm -C /dev/sda")` doesn't show up when running via my Cron, even though both are executing on a remote host and should in theory be hitting the same hdparm. 
 
-  * https://stackoverflow.com/questions/11193466/echo-without-newline-in-a-shell-script printf should be used when wanting to avoid newlines, echo behavior is more unreliable
+  * Running `ssh -t -o LogLevel=QUIET root@poorbox.brad "which hdparm"` in the cli gives me `/usr/sbin/hdparm` but Cron gives me the same thing. I thought it might have to do with STDERR and STDOUT being different but `ssh -t -o LogLevel=QUIET root@poorbox.brad "hdparm -C /dev/sda" > out 2> err` both prints to STDOUT. This might just mean I need to do error handling better in diskTemp and catch missing responses, since sda and sdb now show up as idle.
+  * I found the fix. We need to include console redirection in the remote command, so `2>&1` needs to be added so the remote SSH command is `ssh -t -o LogLevel=QUIET root@poorbox.brad "hdparm -C /dev/$1 2>&1"` and then remote call works the same way as our shell https://unix.stackexchange.com/questions/66170/how-to-ssh-on-multiple-ipaddress-and-get-the-output-and-error-on-the-local-nix
 
-  * I had the old script running as PHP on unRAID itself, and as https://forums.unraid.net/topic/42475-crontab-added-through-go-script-not-working/ notes any `.cron` file under the directory `/boot/config/plugins/dynamix` will get loaded into the crontab. I had a `diskstats.cron` file there with `\* * * * * /usr/bin/php /boot/myScripts/hdStats.php &> /dev/null`. I've moved it out of the directory and run `update_cron` to reload the crontab without a reboot, and then ran `cat /etc/cron.d/root` to check what the current cron setup was (note that `crontab -l` isn't what you want here)
+* I had the old script running as PHP on unRAID itself that used to do what this script did. It's no longer being used, so these notes are just for if I need to run a Cron job on Unraid locally again. 
 
-  * WEIRD. I found that the `SG_IO: bad/missing sense data, sb[]: 70 ` line of the output when running `rawResponse=$(ssh -t -o LogLevel=QUIET root@poorbox.brad "hdparm -C /dev/sda")` doesn't show up when running via Cron, even though both are executing on a remote host and should in theory be hitting the same hdparm. Running `ssh -t -o LogLevel=QUIET root@poorbox.brad "which hdparm"` in the cli gives me `/usr/sbin/hdparm` but Cron gives me the same thing. I thought it might have to do with STDERR and STDOUT being different but `ssh -t -o LogLevel=QUIET root@poorbox.brad "hdparm -C /dev/sda" > out 2> err` both prints to STDOUT. This might just mean I need to do error handling better in diskTemp and catch missing responses, since sda and sdb now show up as idle.
+  * As https://forums.unraid.net/topic/42475-crontab-added-through-go-script-not-working/ notes, any `.cron` file under the directory `/boot/config/plugins/dynamix` will get loaded into the crontab. 
+  * I had a `diskstats.cron` file there with `\* * * * * /usr/bin/php /boot/myScripts/hdStats.php &> /dev/null`. I've moved it out of the directory and run `update_cron` to reload the crontab without a reboot, and then ran `cat /etc/cron.d/root` to check what the current cron setup was (note that `crontab -l` isn't what you want here)
 
-  * I found the fix. We need to include console redirection in the remote command, so `2>&1` needs to be added so the remote SSH command is `ssh -t -o LogLevel=QUIET root@poorbox.brad "hdparm -C /dev/$1 2>&1"` and then Cron works the same way as our shell https://unix.stackexchange.com/questions/66170/how-to-ssh-on-multiple-ipaddress-and-get-the-output-and-error-on-the-local-nix
+
+
+## InfluxDB CLI
+
+* Enter into the Influx prompt with `influx` or `influx -precision rfc3339`
+  * By default, timestamps print out in nanoseconds which  is unreadable. Initialize Influx with `influx -precision rfc3339` to get full date printouts
+  * Exit with `exit` or `CTRL + D` 
+  * More info at https://docs.influxdata.com/influxdb/v1.8/tools/shell/
+* Databases are where each set of data is stored. 
+  * `show databases` will list all the options
+  * `use local_reporting` will  select the DB named `local_reporting`
+* Series exist within databases, and broadly categorize data
+  * `show series` will show all the series+tag combinations inside the chosen database
+* Tags are optional parts of data points separate from the data fields themselves and intended to be used for common queries, rather than constantly changing data
+  * They are key-value pairs
+  * A sensor name, measurement category, or serial number could be a relatively fixed variable stored as a tag. For example, the key might be `hostname` while the value is `nodemcu3`
+  * When querying by tag, single quotes must be used. `select * from ups_data where ups = 'cyberpower' and time > now() - 5m  LIMIT 10` will  show data due to the single quotes but `select * from ups_data where ups = "cyberpower" and time > now() - 5m  LIMIT 10` will not, because the tag key `ups`
+

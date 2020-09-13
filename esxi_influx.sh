@@ -46,7 +46,7 @@ done <<< "$hwinfo"
 # https://unix.stackexchange.com/questions/109835/how-do-i-use-cut-to-separate-by-multiple-whitespace
 # Line should be similar to 'Drive Temperature         43     81         N/A    N/A'
 # Reformat the line to remove consecutive spaces
-driveTemp=$(echo $driveTemp | tr -s ' ')
+driveTemp=$(echo $driveTemp | tr --squeeze-repeats ' ')
 
 # Use IFS to split into an array with space delimiter
 IFS=' ' read -ra driveTempArr <<< "$driveTemp"
@@ -69,8 +69,7 @@ echo "CPU12: $cpu12%"
 echo -e "datastoreTemp: $driveTempC C\n"
 
 
-# Write the data to the database
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting' --data-binary "esxi_stats,host=esxi1,type=cpu_usage cpu_num1=$cpu1,cpu_num2=$cpu2,cpu_num3=$cpu3,cpu_num4=$cpu4,cpu_num5=$cpu5,cpu_num6=$cpu6,cpu_num7=$cpu7,cpu_num8=$cpu8,cpu_num9=$cpu9,cpu_num10=$cpu10,cpu_num11=$cpu11,cpu_num12=$cpu12,datastoreTempC=$driveTempC"
+# Write the data to the database down below
 
 
 # Now get the hardware info from the remote host using passwordless SSH
@@ -90,8 +89,8 @@ while read -r line; do
 done <<< "$hwinfo"
 
 # Remove the long string of .s
-kmemline=$(echo $kmemline | tr -s '[.]')
-freememline=$(echo $freememline | tr -s '[.]')
+kmemline=$(echo $kmemline | tr --squeeze-repeats '[.]')
+freememline=$(echo $freememline | tr --squeeze-repeats '[.]')
 
 # Parse out the memory values from the strings
 # First split on the only remaining . in the strings
@@ -120,4 +119,5 @@ echo -e "Memory Free: $freemem\n"
 epochseconds=$(date +%s)
 
 # Write the data to the database
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "esxi_stats,host=esxi1,type=memory_usage percent=$pcent,free=$freemem,used=$used $epochseconds"
+curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "esxi_stats,host=esxi1,type=memory_usage percent=$pcent,free=$freemem,used=$used $epochseconds
+esxi_stats,host=esxi1,type=cpu_usage cpu_num1=$cpu1,cpu_num2=$cpu2,cpu_num3=$cpu3,cpu_num4=$cpu4,cpu_num5=$cpu5,cpu_num6=$cpu6,cpu_num7=$cpu7,cpu_num8=$cpu8,cpu_num9=$cpu9,cpu_num10=$cpu10,cpu_num11=$cpu11,cpu_num12=$cpu12,datastoreTempC=$driveTempC $epochseconds"

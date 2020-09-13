@@ -4,9 +4,7 @@
 # https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
 set -euo pipefail
 
-#
-# Get USB-connected Cyberpower UPS information using the powerpanel package's pwrstat utility
-#
+# Gets USB-connected Cyberpower UPS information using the powerpanel package's pwrstat utility
 
 # store the output of pwrstat -status. Use the full path, otherwise cron can't run it.
 bulkData=$(/usr/sbin/pwrstat -status)
