@@ -128,10 +128,23 @@ This repository captures the various scripts used to capture the state of variou
 
 * `if (( $(bc <<< "$currentDataValue < 0.0") )) ; then` is an example of using `bc` to compare floats to integers and possible other stuff. Otherwise, decimal/float values may not be correctly interpreted
 
+* Bash Integer and String arithmetic
+
+  * https://kapeli.com/cheat_sheets/Bash_Test_Operators.docset/Contents/Resources/Documents/index
+  * https://tldp.org/LDP/abs/html/comparison-ops.html
+
 * `epochseconds=$(date +%s)` will get the current number of system time seconds since epoch in 1970 
 
   * https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
   * `date +%s%N` gives nanoseconds, meaning `echo $(($(date +%s%N)/1000000))` could give milliseconds and `echo $(($(date +%s%N)/1000))` could give microseconds
+
+* Variable standards: snake case with all lower case and underscores, no camelCase, no all caps
+
+  * https://stackoverflow.com/questions/673055/correct-bash-and-shell-script-variable-capitalization 
+
+* `sed -n ${i}p <<< $shareNames` when given an integer `$i` can grab a specific line from an input with multiple lines. 
+
+  * https://stackoverflow.com/questions/15777232/how-can-i-echo-print-specific-lines-from-a-bash-variable
 
 * `bulkData=$(snmpwalk -m ALL -c public -v 2c esxi.brad)` can be used to call an IP address and fetch all possible SNMP data.  
 

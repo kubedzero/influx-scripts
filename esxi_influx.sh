@@ -7,27 +7,26 @@ set -euo pipefail
 # Get per-thread CPU utilization and memory utilization
 
 
-# Call snmpwalk to get all the SNMP data from ESXi. -m MIB-FILE to define a mib file to use if we
-# want to specify a particular object. -c public to identify the community. -v 2c to specify the
-# SNMP version. Pipe the output to grep to grab only the CPU load, and store it.
-bulkData=$(snmpwalk -m ALL -c public -v 2c esxi.brad|grep HOST-RESOURCES-MIB::hrProcessorLoad)
+# Call snmpwalk to get data from ESXi
+# -v 2c to specify the SNMP version
+# -c public to identify the community
+# Specify the IP, then the specific set of lines we want: hrProcessorLoad
+# Example output: HOST-RESOURCES-MIB::hrProcessorLoad.1 = INTEGER: 11
+bulkData=$(snmpwalk -v 2c -c public esxi.brad hrProcessorLoad)
 echo $bulkData
-# Parse out CPU usage and get just the number
-# The quotes around bulkdata preserve the newlines from grep, otherwise it becomes one line
-# The quotes around the grep make the whitespace inclusive, so 1 doesn't grab 1, 10, 11, etc.
-# Then cut out the first N characters from each line to leave only the number value
-cpu1=$(echo "$bulkData" | grep "HOST-RESOURCES-MIB::hrProcessorLoad.1 " | cut -c 50-)
-cpu2=$(echo "$bulkData" | grep HOST-RESOURCES-MIB::hrProcessorLoad.2 | cut -c 50-)
-cpu3=$(echo "$bulkData" | grep HOST-RESOURCES-MIB::hrProcessorLoad.3 | cut -c 50-)
-cpu4=$(echo "$bulkData" | grep HOST-RESOURCES-MIB::hrProcessorLoad.4 | cut -c 50-)
-cpu5=$(echo "$bulkData" | grep HOST-RESOURCES-MIB::hrProcessorLoad.5 | cut -c 50-)
-cpu6=$(echo "$bulkData" | grep HOST-RESOURCES-MIB::hrProcessorLoad.6 | cut -c 50-)
-cpu7=$(echo "$bulkData" | grep HOST-RESOURCES-MIB::hrProcessorLoad.7 | cut -c 50-)
-cpu8=$(echo "$bulkData" | grep HOST-RESOURCES-MIB::hrProcessorLoad.8 | cut -c 50-)
-cpu9=$(echo "$bulkData" | grep HOST-RESOURCES-MIB::hrProcessorLoad.9 | cut -c 50-)
-cpu10=$(echo "$bulkData" | grep HOST-RESOURCES-MIB::hrProcessorLoad.10 | cut -c 51-)
-cpu11=$(echo "$bulkData" | grep HOST-RESOURCES-MIB::hrProcessorLoad.11 | cut -c 51-)
-cpu12=$(echo "$bulkData" | grep HOST-RESOURCES-MIB::hrProcessorLoad.12 | cut -c 51-)
+# From the unformatted data, isolate a specific thread's line and the CPU % 
+cpu1=$(echo "$bulkData"  | grep "\.1 "  | awk '{print $4}')
+cpu2=$(echo "$bulkData"  | grep "\.2 "  | awk '{print $4}')
+cpu3=$(echo "$bulkData"  | grep "\.3 "  | awk '{print $4}')
+cpu4=$(echo "$bulkData"  | grep "\.4 "  | awk '{print $4}')
+cpu5=$(echo "$bulkData"  | grep "\.5 "  | awk '{print $4}')
+cpu6=$(echo "$bulkData"  | grep "\.6 "  | awk '{print $4}')
+cpu7=$(echo "$bulkData"  | grep "\.7 "  | awk '{print $4}')
+cpu8=$(echo "$bulkData"  | grep "\.8 "  | awk '{print $4}')
+cpu9=$(echo "$bulkData"  | grep "\.9 "  | awk '{print $4}')
+cpu10=$(echo "$bulkData" | grep "\.10 " | awk '{print $4}')
+cpu11=$(echo "$bulkData" | grep "\.11 " | awk '{print $4}')
+cpu12=$(echo "$bulkData" | grep "\.12 " | awk '{print $4}')
 
 # Get the SSD/datastore name with `esxcli storage core device list |grep t10`
 datastoreDeviceName=t10.NVMe____Samsung_SSD_970_PRO_512GB_______________803BB19155382500

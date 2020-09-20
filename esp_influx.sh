@@ -29,6 +29,7 @@ declare -a EspDestArray=(
 arraylength=${#EspIpArray[@]}
 
 # use for loop to read all values and indexes
+# https://github.com/koalaman/shellcheck/wiki/SC2004 no need for $
 for (( i=1; i<arraylength+1; i++ ));
 do
     echo "$i" "/" "${arraylength}" ":" "${EspIpArray[$i-1]}" "to" "${EspDestArray[$i-1]}"
@@ -65,7 +66,7 @@ do
     #printf '%s\n' "${datacsvsplit[@]}"
 
     # use for loop to read all names and values
-    for (( j=1; j<innerArrayLength+1; j++ ));
+    for (( j=1; j<$innerArrayLength+1; j++ ));
     do
         # trim whitespace https://stackoverflow.com/questions/369758/how-to-trim-whitespace-from-a-bash-variable
         headercsvsplit[$j-1]="$( echo "${headercsvsplit[$j-1]}" | xargs echo -n)"
