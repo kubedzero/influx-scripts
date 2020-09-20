@@ -130,17 +130,43 @@ do
 
 done
 
-# Get seconds since Epoch, which is timezone-agnostic
-# https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
-epochseconds=$(date +%s)
 
-if [[ $influx_disk_free != "UNFILLED" && $influx_share_free != "UNFILLED" && $influx_disk_temp != "UNFILLED" && $influx_disk_active != "UNFILLED" ]]; then
-    #Write the data to the database, one line per measurement
+# Now get the CPU data, which is in a separate SNMP output
+printf "\nCalling SNMP again to grab a different OID\n"
+# Call SNMP running on Unraid, specifying the community, version, IP, and block of data
+bulk_snmp=$(snmpwalk -v 2c -c public poorbox.brad HOST-RESOURCES-MIB::hrProcessorLoad)
+echo "Call to Unraid SNMP to fetch CPU complete. Begin parsing..."
+
+# Remove the OID information to leave only the percent load value
+# Input: HOST-RESOURCES-MIB::hrProcessorLoad.196609 = INTEGER: 61
+# Output: 61
+procLoadData=($(echo "$bulk_snmp" | sed -e 's/.*= INTEGER: //g'))
+
+# Update array elements with core number alongside CPU percent
+# Core numbers are zero-indexed
+for ((i=0; i<${#procLoadData[@]}; i++));
+do
+    procLoadData[$i]="$i=${procLoadData[$i]}"
+done
+
+# Convert the array elements to a single comma separated line
+influx_cpu_percent=$(IFS=, ; echo "${procLoadData[*]}")
+echo "Processor CPU Percent values are $influx_cpu_percent"
+
+
+# Validate the data and submit
+if [[ ! -z "$influx_cpu_percent" && $influx_disk_free != "UNFILLED" && $influx_share_free != "UNFILLED" && $influx_disk_temp != "UNFILLED" && $influx_disk_active != "UNFILLED" ]]; then
+    # Get seconds since Epoch, which is timezone-agnostic
+    # https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
+    epochseconds=$(date +%s)
+
+    # Write the data to the database, one line per measurement
     printf "\nPosting data to InfluxDB\n"
     curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "unraid,host=poorbox,type=diskActive $influx_disk_active $epochseconds
 unraid,host=poorbox,type=diskTemp $influx_disk_temp $epochseconds
 unraid,host=poorbox,type=diskFree $influx_disk_free $epochseconds
-unraid,host=poorbox,type=shareFree $influx_share_free $epochseconds"
+unraid,host=poorbox,type=shareFree $influx_share_free $epochseconds
+unraid,host=poorbox,type=cpuPercent $influx_cpu_percent $epochseconds"
 else
     echo "Some value was unfilled, please fix to submit data to InfluxDB"
 fi
