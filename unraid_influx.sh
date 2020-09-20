@@ -1,125 +1,146 @@
-#!/bin/sh
+#!/usr/bin/sh
 # NOTE: /bin/sh on macOS, /usr/bin/sh on CentOS
+
+# Fetch Unraid information via SNMP
+
 
 # https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
 set -euo pipefail
 
-# Fetch HDD active/standby states, temp, CPU, RAM, and more from unRAID
+# Call SNMP running on Unraid, specifying the community, version, IP, and block of data
+bulk_snmp="$(snmpwalk -v 2c -c public poorbox.brad nsExtendOutLine)"
+echo "Call to Unraid SNMP to fetch disk and share data complete. Begin parsing..."
 
-# Assume passwordless SSH has been set up and run a command on UnRAID to fetch
-# Then parse the value and update the passback value
-# $1 is the drive letter (sda, sdb) and $2 is the passback value
-getActiveStandbyState () {
+# Define strings we'll update that send to influx
+influx_disk_free="UNFILLED"
+influx_share_free="UNFILLED"
+influx_disk_temp="UNFILLED"
+influx_disk_active="UNFILLED"
 
-    # https://www.cyberciti.biz/faq/unix-linux-execute-command-using-ssh/
-    # https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash
-    # https://superuser.com/questions/457316/how-to-remove-connection-to-xx-xxx-xx-xxx-closed-message
-    # run a remote command on the host and store its value, avoiding "Connection to x closed" message
-    # run it with an OR conditional so a bad remote command doesn't cause `set` to end the execution
-    rawResponse=$(ssh -t -o LogLevel=QUIET root@poorbox.brad "hdparm -C /dev/$1 2>&1") || printf "SSH remote command failure for /dev/$1. "
+# Store the line count of bulk data
+bulk_line_count=$(echo "$bulk_snmp" | wc -l)
 
-    # If the response contains "No such file or directory" in the response
-    # or "missing sense data" the disk isn't installed so we should mark as -1 error.
-    # Else if it contains "active/idle" we should mark as 1.
-    # Else if it contains "standby" we should mark 0
-    # https://stackoverflow.com/questions/229551/how-to-check-if-a-string-contains-a-substring-in-bash
-    # https://linuxize.com/post/bash-if-else-statement/
-    if [[ $rawResponse == *"No such file or directory"* ]]; then
-        echo "Disk /dev/$1 is not installed, setting Active state to -1"
-        diskState=-1
-    elif [[ $rawResponse == *"missing sense data"* ]]; then
-        echo "Disk /dev/$1 is invalid, setting Active state to -1"
-        diskState=-1
-    elif [[ $rawResponse == *"active/idle"* ]]; then
-        echo "Disk /dev/$1 is active/idle, setting Active state to 1"
-        diskState=1
-    elif [[ $rawResponse == *"standby"* ]]; then
-        echo "Disk /dev/$1 is in standby, setting Active state to 0"
-        diskState=0
-    else
-        echo "Unhandled response, setting Active state to -1"
-        diskState=0
-    fi
+# Iterate through each line of bulk data
+# https://github.com/koalaman/shellcheck/wiki/SC2004 no need for $
+for (( i=1; i<=bulk_line_count; i++ ));
+do
+    # Get the specific line of the string we want
+    # https://stackoverflow.com/questions/15777232/how-can-i-echo-print-specific-lines-from-a-bash-variable
+    line=$(sed -n "${i}"p <<< "$bulk_snmp")
 
-    # set passback value to the parsed value
-    eval "$2=$diskState"
-}
+    # check the line for the type of SNMP data we want
+    # https://stackoverflow.com/questions/22712156/bash-if-string-contains-in-case-statement
+    # The close paren ) marks the end of the case evaluation and is not part of the string match
+    # The double semicolon marks the end of the case action
+    case $line in
+        *"diskfree"*)
+            # Replace colons with equal signs, get 4th and 5th whitespace-separated values
+            # https://github.com/koalaman/shellcheck/wiki/SC2001
+            # Line example: NET-SNMP-EXTEND-MIB::nsExtendOutLine."diskfree".3 = STRING: disk2: 197598232576
+            # Output example: disk2=197598232576
+            current_disk_free=$(echo "${line//:/=}" | awk '{print $4$5}')
 
-# Assume passwordless SSH to fetch and parse temperature and update the passback value
-# $1 is the drive letter (sda, sdb), $2 is the Active state, $3 is the passback value
-getDiskTemp () {
+            # Confirm the value after = is numeric, otherwise go to next loop
+            # https://unix.stackexchange.com/questions/151654/checking-if-an-input-number-is-an-integer
+            string_to_check=$(echo "$line" | awk '{print $5}')
+            if [[ -z "$string_to_check" || ! "$string_to_check" =~ ^[0-9]+$ ]]
+            then
+                echo "Skipping: Encountered an empty disk name or non-numeric free space"
+                continue
+            fi
 
-    # https://www.tldp.org/LDP/abs/html/comparison-ops.html
-    # Only process if the status code is not in an error state, aka 0 or 1. Don't wrap integer in quotes
-    # Can also do if (( $(bc <<< "$2 > -1") )) ; then
-    if [ "$2" -gt -1 ]; then
+            echo "Found disk free line: $current_disk_free"
 
-        # https://www.cyberciti.biz/faq/unix-linux-execute-command-using-ssh/
-        # https://superuser.com/questions/457316/how-to-remove-connection-to-xx-xxx-xx-xxx-closed-message
-        # https://unix.stackexchange.com/questions/66170/how-to-ssh-on-multiple-ipaddress-and-get-the-output-and-error-on-the-local-nix
-        # run a remote command on the host and store its value, avoiding "Connection to x closed" message
-        # run it with an OR conditional so a bad remote command doesn't cause `set` to end the execution
-        # make sure STDERR is being redirected to STDOUT the way the normal shell is configured
-        rawResponse=$(ssh -t -o LogLevel=QUIET root@poorbox.brad "smartctl -A /dev/$1 2>&1")  || printf "SSH remote command failure for /dev/$1. "
+            # If it's the first one, replace UNFILLED and don't trail a comma
+            if [[ $influx_disk_free == "UNFILLED" ]]; then
+                influx_disk_free="$current_disk_free"
+            else
+                # Add the value to the influx string separated by comma.
+                influx_disk_free="$current_disk_free,$influx_disk_free"
+            fi
+            ;;
+        *"sharefree"*)
+            # Line example: NET-SNMP-EXTEND-MIB::nsExtendOutLine."sharefree".1 = STRING: Files: 3028310544384
+            # Output example: Files=197598232576
+            current_share_free=$(echo "${line//:/=}" | awk '{print $4$5}')
 
-        # https://superuser.com/questions/241018/how-to-replace-multiple-spaces-by-one-tab
-        # https://stackoverflow.com/questions/800030/remove-carriage-return-in-unix
-        # Find line mentioning Temp, reduce repeated spaces to one, split on space, grab field, remove carriage return
-        diskTemp=$(echo "$rawResponse" | grep "Temperature" | tr --squeeze-repeats '[:space:]' | cut -d ' ' -f10 | tr -d '\r')
+            # Confirm the value after = is numeric, otherwise go to next loop
+            # https://unix.stackexchange.com/questions/151654/checking-if-an-input-number-is-an-integer
+            string_to_check=$(echo "$line" | awk '{print $5}')
+            if [[ -z "$string_to_check" || ! "$string_to_check" =~ ^[0-9]+$ ]]
+            then
+                echo "Skipping: Encountered an empty share name or non-numeric free space"
+                continue
+            fi
 
-        # https://www.cyberciti.biz/faq/unix-linux-bash-script-check-if-variable-is-empty/
-        # if variable is empty, make sure to populate it with an error value
-        if [ -z "$diskTemp" ]; then
-            echo "Disk temperature of /dev/$1 was empty. Setting to -1"
-            diskTemp=-1
-        else
-            echo "Disk temperature of /dev/$1 is [$diskTemp]"
-        fi
+            echo "Found share free line: $current_share_free"
 
-    else
-        echo "Disk /dev/$1 is not installed, setting temp to -1"
-        diskTemp=-1
-    fi
+            # If it's the first one, replace UNFILLED and don't trail a comma
+            if [[ $influx_share_free == "UNFILLED" ]]; then
+                influx_share_free="$current_share_free"
+            else
+                # Add the value to the influx string separated by comma.
+                influx_share_free="$current_share_free,$influx_share_free"
+            fi
+            ;;
+        *"disktemp"*)
+            # Disk temp is a special measurement, as it also communicates standby state
+            # An input of -2 is standby, -1 is error, >0 is active/idle temperature. 0 not used
 
-    # set passback value to the parsed value
-    eval "$3=$diskTemp"
-}
+            # Line example: NET-SNMP-EXTEND-MIB::nsExtendOutLine."disktemp".1 = STRING: WDC_WD100EMAZ-00WJTA0_2ABCDAD: 44
+            current_disk_name=$(echo "$line" | awk '{print $4}')
+            current_disk_temp=$(echo "$line" | awk '{print $5}')
+            if [[ -z "$current_disk_name$current_disk_temp" ]]
+            then
+                echo "Skipping: Encountered an empty disk name or temperature"
+                continue
+            fi
 
-# https://www.unix.com/unix-for-dummies-questions-and-answers/123480-initializing-multiple-variables-one-statement.html
-# Define our HDD active/standby variables
-sdaActive=sdbActive=sdcActive=sddActive=sdeActive=sdfActive=sdgActive=sdhActive="UNFILLED"
+            # Calculate active state. -1 is error, 0 is standby, 1 is active/idle
+            current_disk_active="-1"
+            if [[ $current_disk_temp == "-2" ]]; then
+                echo "Disk $current_disk_name in standby, setting active state to 0"
+                current_disk_active=0
+            elif [[ $current_disk_temp -gt 0 ]]; then
+                echo "Disk $current_disk_name has temperature $current_disk_temp, setting active state to 1"
+                current_disk_active=1
+            else
+                echo "Disk $current_disk_name temp value is $current_disk_temp, setting active state to -1"
+            fi
 
-# Fetch HDD states with passwordless SSH executing hdparm
-echo -e "\n\nGetting Disk States"
-getActiveStandbyState "sda" sdaActive
-getActiveStandbyState "sdb" sdbActive
-getActiveStandbyState "sdc" sdcActive
-getActiveStandbyState "sdd" sddActive
-getActiveStandbyState "sde" sdeActive
-getActiveStandbyState "sdf" sdfActive
-getActiveStandbyState "sdg" sdgActive
-getActiveStandbyState "sdh" sdhActive
+            # Update the influx strings with this disk's active state and temperature
 
-# Use the HDD Active state and passwordless SSH to get temperature value
-# Define our HDD temp variables
-sdaTempC=sdbTempC=sdcTempC=sddTempC=sdeTempC=sdfTempC=sdgTempC=sdhTempC="UNFILLED"
+            # If it's the first one, replace UNFILLED and don't trail a comma
+            if [[ $influx_disk_temp == "UNFILLED" ]]; then
+                influx_disk_temp="$current_disk_name=$current_disk_temp"
+            else
+                # Add the value to the influx string separated by comma.
+                influx_disk_temp="$current_disk_name=$current_disk_temp,$influx_disk_temp"
+            fi
 
-# Fetch HDD states with passwordless SSH executing smartctl
-echo -e "\n\nGetting Disk Temperatures"
-getDiskTemp "sda" "$sdaActive" sdaTempC
-getDiskTemp "sdb" "$sdbActive" sdbTempC
-getDiskTemp "sdc" "$sdcActive" sdcTempC
-getDiskTemp "sdd" "$sddActive" sddTempC
-getDiskTemp "sde" "$sdeActive" sdeTempC
-getDiskTemp "sdf" "$sdfActive" sdfTempC
-getDiskTemp "sdg" "$sdgActive" sdgTempC
-getDiskTemp "sdh" "$sdhActive" sdhTempC
+            # If it's the first one, replace UNFILLED and don't trail a comma
+            if [[ $influx_disk_active == "UNFILLED" ]]; then
+                influx_disk_active="$current_disk_name=$current_disk_active"
+            else
+                # Add the value to the influx string separated by comma.
+                influx_disk_active="$current_disk_name=$current_disk_active,$influx_disk_active"
+            fi
+            ;;
+    esac
+
+done
 
 # Get seconds since Epoch, which is timezone-agnostic
 # https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
 epochseconds=$(date +%s)
 
-#Write the data to the database
-echo -e "\n\nPosting data to InfluxDB\n"
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "unraid,host=poorbox,type=diskActive sdaActive=$sdaActive,sdbActive=$sdbActive,sdcActive=$sdcActive,sddActive=$sddActive,sdeActive=$sdeActive,sdfActive=$sdfActive,sdgActive=$sdgActive,sdhActive=$sdhActive $epochseconds
-unraid,host=poorbox,type=diskTemp sdaTempC=$sdaTempC,sdbTempC=$sdbTempC,sdcTempC=$sdcTempC,sddTempC=$sddTempC,sdeTempC=$sdeTempC,sdfTempC=$sdfTempC,sdgTempC=$sdgTempC,sdhTempC=$sdhTempC $epochseconds"
+if [[ $influx_disk_free != "UNFILLED" && $influx_share_free != "UNFILLED" && $influx_disk_temp != "UNFILLED" && $influx_disk_active != "UNFILLED" ]]; then
+    #Write the data to the database, one line per measurement
+    printf "\nPosting data to InfluxDB\n"
+    curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "unraid,host=poorbox,type=diskActive $influx_disk_active $epochseconds
+unraid,host=poorbox,type=diskTemp $influx_disk_temp $epochseconds
+unraid,host=poorbox,type=diskFree $influx_disk_free $epochseconds
+unraid,host=poorbox,type=shareFree $influx_share_free $epochseconds"
+else
+    echo "Some value was unfilled, please fix to submit data to InfluxDB"
+fi
