@@ -16,7 +16,7 @@ sleep $wait_seconds
 
 # Define an array of the speedtest server IDs we want to use, and pick a random one
 # https://www.christianroessler.net/tech/2015/bash-array-random-element.html
-speedtest_servers=(603 5754 17587 18531)
+speedtest_servers=(603 5754 18531)
 selected_server=${speedtest_servers[$RANDOM % ${#speedtest_servers[@]}]}
 
 # Run the speedtest https://www.speedtest.net/apps/cli
