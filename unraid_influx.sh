@@ -93,8 +93,10 @@ do
             # Disk temp is a special measurement, as it also communicates standby state
             # An input of -2 is standby, -1 is error, >0 is active/idle temperature. 0 not used
 
+            # Remove the colon : character from the name
+            # https://stackoverflow.com/questions/13210880/replace-one-substring-for-another-string-in-shell-script
             # Line example: NET-SNMP-EXTEND-MIB::nsExtendOutLine."disktemp".1 = STRING: WDC_WD100EMAZ-00WJTA0_2ABCDAD: 44
-            current_disk_name=$(echo "$line" | awk '{print $4}')
+            current_disk_name=$(echo "${line//:/}" | awk '{print $4}')
             current_disk_temp=$(echo "$line" | awk '{print $5}')
             if [[ -z "$current_disk_name$current_disk_temp" ]]
             then
@@ -170,6 +172,7 @@ if [[ ! -z "$influx_cpu_percent" && $influx_disk_free != "UNFILLED" && $influx_s
     printf "\nPosting data to InfluxDB\n\n"
     curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
 unraid,host=poorbox,type=diskTemp $influx_disk_temp $epoch_seconds
+unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
 unraid,host=poorbox,type=diskFree $influx_disk_free $epoch_seconds
 unraid,host=poorbox,type=shareFree $influx_share_free $epoch_seconds
 unraid,host=poorbox,type=cpuPercent $influx_cpu_percent $epoch_seconds"
