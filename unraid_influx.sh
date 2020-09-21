@@ -162,20 +162,21 @@ influx_cpu_percent=$(IFS=, ; echo "${procLoadData[*]}")
 echo "Processor CPU Percent values are $influx_cpu_percent"
 
 
-# Validate the data and submit
-if [[ ! -z "$influx_cpu_percent" && $influx_disk_free != "UNFILLED" && $influx_share_free != "UNFILLED" && $influx_disk_temp != "UNFILLED" && $influx_disk_active != "UNFILLED" ]]; then
-    # Get seconds since Epoch, which is timezone-agnostic
-    # https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
-    epoch_seconds=$(date +%s)
+# Validate the data, exiting early if some is empty or unfilled
+if [[ -z "$influx_cpu_percent" && $influx_disk_free == "UNFILLED" && $influx_share_free == "UNFILLED" && $influx_disk_temp == "UNFILLED" && $influx_disk_active == "UNFILLED" ]]; then
+    echo "Some value was unfilled, please fix to submit data to InfluxDB"
+    exit 1
+fi
 
-    # Write the data to the database, one line per measurement
-    printf "\nPosting data to InfluxDB\n\n"
-    curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
+# Get seconds since Epoch, which is timezone-agnostic
+# https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
+epoch_seconds=$(date +%s)
+
+# Write the data to the database, one line per measurement
+printf "\nPosting data to InfluxDB\n\n"
+curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
 unraid,host=poorbox,type=diskTemp $influx_disk_temp $epoch_seconds
 unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
 unraid,host=poorbox,type=diskFree $influx_disk_free $epoch_seconds
 unraid,host=poorbox,type=shareFree $influx_share_free $epoch_seconds
 unraid,host=poorbox,type=cpuPercent $influx_cpu_percent $epoch_seconds"
-else
-    echo "Some value was unfilled, please fix to submit data to InfluxDB"
-fi
