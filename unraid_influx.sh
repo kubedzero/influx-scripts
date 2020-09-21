@@ -22,6 +22,7 @@ influx_disk_free="UNFILLED"
 influx_share_free="UNFILLED"
 influx_disk_temp="UNFILLED"
 influx_disk_active="UNFILLED"
+influx_mem_info="UNFILLED"
 
 # Store the line count of bulk data
 bulk_line_count=$(echo "$bulk_snmp" | wc -l)
@@ -87,6 +88,30 @@ do
             else
                 # Add the value to the influx string separated by comma.
                 influx_share_free="$current_share_free,$influx_share_free"
+            fi
+            ;;
+        *"meminfo"*)
+            # Line example: NET-SNMP-EXTEND-MIB::nsExtendOutLine."meminfo".1 = STRING: MemTotal: 25278668800
+            # Output example: MemTotal=25278668800
+            current_mem_info=$(echo "${line//:/=}" | awk '{print $4$5}')
+
+            # Confirm the value after = is numeric, otherwise go to next loop
+            # https://unix.stackexchange.com/questions/151654/checking-if-an-input-number-is-an-integer
+            string_to_check=$(echo "$line" | awk '{print $5}')
+            if [[ -z "$string_to_check" || ! "$string_to_check" =~ ^[0-9]+$ ]]
+            then
+                echo "Skipping: Encountered an memory or non-numeric memory bytes"
+                continue
+            fi
+
+            echo "Found memory info: $current_mem_info"
+
+            # If it's the first one, replace UNFILLED and don't trail a comma
+            if [[ $influx_mem_info == "UNFILLED" ]]; then
+                influx_mem_info="$current_mem_info"
+            else
+                # Add the value to the influx string separated by comma.
+                influx_mem_info="$current_mem_info,$influx_mem_info"
             fi
             ;;
         *"disktemp"*)
@@ -162,7 +187,7 @@ influx_cpu_percent=$(IFS=, ; echo "${procLoadData[*]}")
 echo "Processor CPU Percent values are $influx_cpu_percent"
 
 
-# Validate the data, exiting early if some is empty or unfilled
+# Validate the data, exiting early if some are empty or unfilled
 if [[ -z "$influx_cpu_percent" && $influx_disk_free == "UNFILLED" && $influx_share_free == "UNFILLED" && $influx_disk_temp == "UNFILLED" && $influx_disk_active == "UNFILLED" ]]; then
     echo "Some value was unfilled, please fix to submit data to InfluxDB"
     exit 1
@@ -179,4 +204,5 @@ unraid,host=poorbox,type=diskTemp $influx_disk_temp $epoch_seconds
 unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
 unraid,host=poorbox,type=diskFree $influx_disk_free $epoch_seconds
 unraid,host=poorbox,type=shareFree $influx_share_free $epoch_seconds
-unraid,host=poorbox,type=cpuPercent $influx_cpu_percent $epoch_seconds"
+unraid,host=poorbox,type=cpuPercent $influx_cpu_percent $epoch_seconds
+unraid,host=poorbox,type=memInfo $influx_mem_info $epoch_seconds"
