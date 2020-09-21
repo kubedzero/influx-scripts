@@ -1,11 +1,17 @@
 #!/usr/bin/sh
 # NOTE: /bin/sh on macOS, /usr/bin/sh on CentOS
 
+# Get Supermicro IPMI sensor information
+
+
 # https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
 set -euo pipefail
 
-# Get Supermicro IPMI sensor information
-
+# Add jitter by sleeping for a random amount of time (between 0-10 seconds).
+# https://servercheck.in/blog/little-jitter-can-help-evening-out-distributed
+wait_seconds=$(( RANDOM %= 10 ))
+echo "Adding $wait_seconds second wait to introduce jitter..."
+sleep $wait_seconds
 
 # call ipmitool to get all physical sensor data collected by the motherboard, plus upper
 # thresholds. -H defines the IP address to connect, -U for the user, -P for password, and
@@ -43,10 +49,24 @@ getMetricValueFromBulkData () {
     eval "$2=$parsedValue"
 }
 
-# https://www.unix.com/unix-for-dummies-questions-and-answers/123480-initializing-multiple-variables-one-statement.html
-# Could also do cpuTempC=systemTempC="UNFILLED" but it's easier to modify with one per line
-# initialize variables
-cpuTempC=systemTempC=peripheralTempC=pchTempC=dimmA1TempC=dimmA2TempC=dimmB1TempC=dimmB2TempC=dimmC1TempC=dimmC2TempC=dimmD1TempC=dimmD2TempC=fan1rpm=fan2rpm=fan3rpm=fan4rpm=fan5rpm="UNFILLED"
+# Initialize variables
+cpuTempC="UNFILLED"
+systemTempC="UNFILLED"
+peripheralTempC="UNFILLED"
+pchTempC="UNFILLED"
+dimmA1TempC="UNFILLED"
+dimmA2TempC="UNFILLED"
+dimmB1TempC="UNFILLED"
+dimmB2TempC="UNFILLED"
+dimmC1TempC="UNFILLED"
+dimmC2TempC="UNFILLED"
+dimmD1TempC="UNFILLED"
+dimmD2TempC="UNFILLED"
+fan1rpm="UNFILLED"
+fan2rpm="UNFILLED"
+fan3rpm="UNFILLED"
+fan4rpm="UNFILLED"
+fan5rpm="UNFILLED"
 
 # Call the function, note that the second argument is a reference rather than the value
 # which is necessary to update the passed-in variable
@@ -70,9 +90,9 @@ getMetricValueFromBulkData "FAN5" fan5rpm
 
 # Get seconds since Epoch, which is timezone-agnostic
 # https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
-epochseconds=$(date +%s)
+epoch_seconds=$(date +%s)
 
 #Write the data to the database
-printf "\nPosting data to InfluxDB\n"
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "ipmi,host=x9srw,type=temp cpuTempC=$cpuTempC,systemTempC=$systemTempC,peripheralTempC=$peripheralTempC,pchTempC=$pchTempC,dimmA1TempC=$dimmA1TempC,dimmA2TempC=$dimmA2TempC,dimmB1TempC=$dimmB1TempC,dimmB2TempC=$dimmB2TempC,dimmC1TempC=$dimmC1TempC,dimmC2TempC=$dimmC2TempC,dimmD1TempC=$dimmD1TempC,dimmD2TempC=$dimmD2TempC $epochseconds
-ipmi,host=x9srw,type=fan fan1rpm=$fan1rpm,fan2rpm=$fan2rpm,fan3rpm=$fan3rpm,fan4rpm=$fan4rpm,fan5rpm=$fan5rpm $epochseconds"
+printf "\nPosting data to InfluxDB\n\n"
+curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "ipmi,host=x9srw,type=temp cpuTempC=$cpuTempC,systemTempC=$systemTempC,peripheralTempC=$peripheralTempC,pchTempC=$pchTempC,dimmA1TempC=$dimmA1TempC,dimmA2TempC=$dimmA2TempC,dimmB1TempC=$dimmB1TempC,dimmB2TempC=$dimmB2TempC,dimmC1TempC=$dimmC1TempC,dimmC2TempC=$dimmC2TempC,dimmD1TempC=$dimmD1TempC,dimmD2TempC=$dimmD2TempC $epoch_seconds
+ipmi,host=x9srw,type=fan fan1rpm=$fan1rpm,fan2rpm=$fan2rpm,fan3rpm=$fan3rpm,fan4rpm=$fan4rpm,fan5rpm=$fan5rpm $epoch_seconds"

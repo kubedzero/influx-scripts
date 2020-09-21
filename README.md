@@ -379,6 +379,22 @@ I found https://www.cyberpowersystems.com/product/software/power-panel-personal/
 
 
 
+##ESXi Memory reading
+
+* I have four 16GB modules installed in my ESXi host.
+* `esxcli hardware memory get` shows ` Physical Memory: 68683657216 Bytes` 
+* The above command confirms my physical memory is 68683657216 bytes or 63.97 gibibytes or 68.68 gigabytes or 67073884 kibibytes.
+* Running `esxcfg-info --hardware` (plus `grep -e "\-Free\." -e "Kernel Memory"` on another computer) gives the following memory-specific lines
+* `|----Kernel Memory.........................................67073884 kilobytes`
+* `|----Free..................................................14773600 kilobytes`
+* When interpreted as the labeled kilobytes, we see: Kernel Memory: 62.47 gibibytes, 67.07 gigabytes, 63966 mebibytes
+* When interpreted as kibibytes though, we see: Kernel Memory: 63.97 gibibytes, 68.68 gigabytes, 65501 mebibytes. 
+  * Wait! This matches the physical memory exactly
+* https://www.mirazon.com/storage-ram-size-doesnt-add/ confirms that RAM's marketing GB is actually Gibibyte rather than Gigabyte. Meanwhile, HDDs sold in TB  are usually referencing Terabytes rather than Tebibytes.
+  * 8GB RAM = 8192 mebibytes = 8 gibibytes = 8.6 gigabytes
+  * 8TB Hard Drive = 8000 gigabytes = 8 terabytes  = 7.28 tebibytes
+* Reddit confirmed my suspicion that ESXi is reporting kibibytes in actuality but labeling them as kilobytes. 
+
 ## Unraid HDD and system readings
 
 * Requires passwordless SSH to be set up, so logging in doesn't need to be interactive

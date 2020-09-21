@@ -7,6 +7,12 @@
 # https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
 set -euo pipefail
 
+# Add jitter by sleeping for a random amount of time (between 0-10 seconds).
+# https://servercheck.in/blog/little-jitter-can-help-evening-out-distributed
+wait_seconds=$(( RANDOM %= 10 ))
+echo "Adding $wait_seconds second wait to introduce jitter..."
+sleep $wait_seconds
+
 # Call SNMP running on Unraid, specifying the community, version, IP, and block of data
 bulk_snmp="$(snmpwalk -v 2c -c public poorbox.brad nsExtendOutLine)"
 echo "Call to Unraid SNMP to fetch disk and share data complete. Begin parsing..."
@@ -158,15 +164,15 @@ echo "Processor CPU Percent values are $influx_cpu_percent"
 if [[ ! -z "$influx_cpu_percent" && $influx_disk_free != "UNFILLED" && $influx_share_free != "UNFILLED" && $influx_disk_temp != "UNFILLED" && $influx_disk_active != "UNFILLED" ]]; then
     # Get seconds since Epoch, which is timezone-agnostic
     # https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
-    epochseconds=$(date +%s)
+    epoch_seconds=$(date +%s)
 
     # Write the data to the database, one line per measurement
-    printf "\nPosting data to InfluxDB\n"
-    curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "unraid,host=poorbox,type=diskActive $influx_disk_active $epochseconds
-unraid,host=poorbox,type=diskTemp $influx_disk_temp $epochseconds
-unraid,host=poorbox,type=diskFree $influx_disk_free $epochseconds
-unraid,host=poorbox,type=shareFree $influx_share_free $epochseconds
-unraid,host=poorbox,type=cpuPercent $influx_cpu_percent $epochseconds"
+    printf "\nPosting data to InfluxDB\n\n"
+    curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
+unraid,host=poorbox,type=diskTemp $influx_disk_temp $epoch_seconds
+unraid,host=poorbox,type=diskFree $influx_disk_free $epoch_seconds
+unraid,host=poorbox,type=shareFree $influx_share_free $epoch_seconds
+unraid,host=poorbox,type=cpuPercent $influx_cpu_percent $epoch_seconds"
 else
     echo "Some value was unfilled, please fix to submit data to InfluxDB"
 fi

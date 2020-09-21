@@ -4,9 +4,16 @@
 
 # This script pulls data from Arduino ESP8266 sensors that publish their data to self-hosted web pages
 
+
 # https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
 # Add an `x` for printing out every line automatically, for debugging
 set -euo pipefail
+
+# Add jitter by sleeping for a random amount of time (between 0-10 seconds).
+# https://servercheck.in/blog/little-jitter-can-help-evening-out-distributed
+wait_seconds=$(( RANDOM %= 10 ))
+echo "Adding $wait_seconds second wait to introduce jitter..."
+sleep $wait_seconds
 
 # https://linuxhint.com/bash_loop_list_strings/
 declare -a EspIpArray=(
@@ -66,7 +73,7 @@ do
     #printf '%s\n' "${datacsvsplit[@]}"
 
     # use for loop to read all names and values
-    for (( j=1; j<$innerArrayLength+1; j++ ));
+    for (( j=1; j<innerArrayLength+1; j++ ));
     do
         # trim whitespace https://stackoverflow.com/questions/369758/how-to-trim-whitespace-from-a-bash-variable
         headercsvsplit[$j-1]="$( echo "${headercsvsplit[$j-1]}" | xargs echo -n)"
@@ -120,12 +127,13 @@ do
         tvoc=${datacsvsplit[17]}
         eco2=${datacsvsplit[18]}
 
+        printf "\nPosting data to InfluxDB...\n\n"
         # Get seconds since Epoch, which is timezone-agnostic
         # https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
-        epochseconds=$(date +%s)
+        epoch_seconds=$(date +%s)
 
         # Submit all values as one record to InfluxDB
         curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary \
-            "environment,host=${EspDestArray[$i-1]} humidity=$humidity,temperaturec=$temperaturec,temperaturef=$temperaturef,pressurehg=$pressurehg,pm100=$pm100,pm250=$pm250,pm1000=$pm1000,uva=$uva,uvb=$uvb,uvindex=$uvindex,tvoc=$tvoc,eco2=$eco2 $epochseconds"
+            "environment,host=${EspDestArray[$i-1]} humidity=$humidity,temperaturec=$temperaturec,temperaturef=$temperaturef,pressurehg=$pressurehg,pm100=$pm100,pm250=$pm250,pm1000=$pm1000,uva=$uva,uvb=$uvb,uvindex=$uvindex,tvoc=$tvoc,eco2=$eco2 $epoch_seconds"
     fi
 done
