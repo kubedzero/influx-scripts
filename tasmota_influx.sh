@@ -53,6 +53,12 @@ do
     # Also get the current switch power state. 1 is on, 0 is off
     power_state=$(echo "$webdata" | jq -r '.Status.Power')
 
+    if [[ "$uptime_seconds" == "null" || "$power_state" == "null" ]]
+    then
+        echo "Uptime or power state was null, exiting early"
+        exit 1
+    fi
+
     printf "Uptime is $uptime_seconds seconds, power state is $power_state"
 
     # Get various power usage data for the Oittm plug. These should be null for the lamp
