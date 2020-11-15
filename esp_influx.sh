@@ -137,7 +137,7 @@ do
         epoch_seconds=$(date +%s)
 
         # Submit all values as one record to InfluxDB
-        curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary \
+        curl -i -XPOST 'http://localhost:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary \
             "environment,host=${EspDestArray[$i-1]} humidity=$humidity,temperaturec=$temperaturec,temperaturef=$temperaturef,pressurehg=$pressurehg,pm100=$pm100,pm250=$pm250,pm1000=$pm1000,uva=$uva,uvb=$uvb,uvindex=$uvindex,tvoc=$tvoc,eco2=$eco2 $epoch_seconds"
     fi
 done

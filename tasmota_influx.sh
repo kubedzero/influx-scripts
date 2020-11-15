@@ -87,7 +87,7 @@ do
     epoch_seconds=$(date +%s)
 
     # Submit all values as one record to InfluxDB
-    curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary \
+    curl -i -XPOST 'http://localhost:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary \
         "tasmota,device=${InfluxDeviceArray[$i-1]} uptime=$uptime_seconds,powerState=$power_state$power_influx_data $epoch_seconds"
 
 done

@@ -134,5 +134,5 @@ printf "\nPosting data to InfluxDB...\n\n"
 epoch_seconds=$(date +%s)
 
 # Write the data to the database
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "esxi_stats,host=esxi1,type=memory_usage percent=$pcent,free=$freemem,used=$used $epoch_seconds
+curl -i -XPOST 'http://localhost:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "esxi_stats,host=esxi1,type=memory_usage percent=$pcent,free=$freemem,used=$used $epoch_seconds
 esxi_stats,host=esxi1,type=cpu_usage cpu_num1=$cpu1,cpu_num2=$cpu2,cpu_num3=$cpu3,cpu_num4=$cpu4,cpu_num5=$cpu5,cpu_num6=$cpu6,cpu_num7=$cpu7,cpu_num8=$cpu8,cpu_num9=$cpu9,cpu_num10=$cpu10,cpu_num11=$cpu11,cpu_num12=$cpu12,datastoreTempC=$driveTempC $epoch_seconds"

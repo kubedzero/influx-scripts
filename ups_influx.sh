@@ -75,7 +75,7 @@ epoch_seconds=$(date +%s)
 printf "\nPosting data to InfluxDB\n\n"
 # write the data to the database if all values are filled
 if [[ $utilVoltage != "UNFILLED" && $outputVoltage != "UNFILLED" && $batteryCapacity != "UNFILLED" && $remainingRuntime != "UNFILLED" && $loadWatts != "UNFILLED" && $loadPercent != "UNFILLED" ]]; then
-    curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "ups_data,ups=cyberpower utilVoltage=$utilVoltage,outputVoltage=$outputVoltage,batteryCapacity=$batteryCapacity,remainingRuntime=$remainingRuntime,loadWatts=$loadWatts,loadPercent=$loadPercent $epoch_seconds"
+    curl -i -XPOST 'http://localhost:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "ups_data,ups=cyberpower utilVoltage=$utilVoltage,outputVoltage=$outputVoltage,batteryCapacity=$batteryCapacity,remainingRuntime=$remainingRuntime,loadWatts=$loadWatts,loadPercent=$loadPercent $epoch_seconds"
 else
     echo "Some value was unfilled, please fix to submit data to InfluxDB"
 fi

@@ -43,4 +43,4 @@ epoch_seconds=$(date +%s)
 
 # Write to the database, including the timestamp for a precision of seconds versus default nanoseconds
 # Store serverID as a tag rather than a field, as we may want to query on it
-/usr/bin/curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "speedtest,serverid=$selected_server ping=$ping,download=$download,upload=$upload $epoch_seconds"
+/usr/bin/curl -i -XPOST 'http://localhost:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "speedtest,serverid=$selected_server ping=$ping,download=$download,upload=$upload $epoch_seconds"

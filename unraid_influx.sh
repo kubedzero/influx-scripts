@@ -203,7 +203,7 @@ epoch_seconds=$(date +%s)
 
 # Write the data to the database, one line per measurement
 printf "\nPosting data to InfluxDB\n\n"
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
+curl -i -XPOST 'http://localhost:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
 unraid,host=poorbox,type=diskTemp $influx_disk_temp $epoch_seconds
 unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
 unraid,host=poorbox,type=diskFree $influx_disk_free $epoch_seconds

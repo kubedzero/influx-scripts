@@ -98,5 +98,5 @@ epoch_seconds=$(date +%s)
 
 #Write the data to the database
 printf "\nPosting data to InfluxDB\n\n"
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "ipmi,host=x9srw,type=temp cpuTempC=$cpuTempC,systemTempC=$systemTempC,peripheralTempC=$peripheralTempC,pchTempC=$pchTempC,dimmA1TempC=$dimmA1TempC,dimmA2TempC=$dimmA2TempC,dimmB1TempC=$dimmB1TempC,dimmB2TempC=$dimmB2TempC,dimmC1TempC=$dimmC1TempC,dimmC2TempC=$dimmC2TempC,dimmD1TempC=$dimmD1TempC,dimmD2TempC=$dimmD2TempC $epoch_seconds
+curl -i -XPOST 'http://localhost:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "ipmi,host=x9srw,type=temp cpuTempC=$cpuTempC,systemTempC=$systemTempC,peripheralTempC=$peripheralTempC,pchTempC=$pchTempC,dimmA1TempC=$dimmA1TempC,dimmA2TempC=$dimmA2TempC,dimmB1TempC=$dimmB1TempC,dimmB2TempC=$dimmB2TempC,dimmC1TempC=$dimmC1TempC,dimmC2TempC=$dimmC2TempC,dimmD1TempC=$dimmD1TempC,dimmD2TempC=$dimmD2TempC $epoch_seconds
 ipmi,host=x9srw,type=fan fan1rpm=$fan1rpm,fan2rpm=$fan2rpm,fan3rpm=$fan3rpm,fan4rpm=$fan4rpm,fan5rpm=$fan5rpm $epoch_seconds"
