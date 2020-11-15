@@ -14,6 +14,10 @@ wait_seconds=$(( RANDOM %= 10 ))
 echo "Adding $wait_seconds second wait to introduce jitter..."
 sleep $wait_seconds
 
+# source will load the lines of the credentials file as variables
+# Format in the file is `VARNAME="VARVALUE"` with one per line
+source "/root/creds.source"
+
 # Define an array of the speedtest server IDs we want to use, and pick a random one
 # https://www.christianroessler.net/tech/2015/bash-array-random-element.html
 speedtest_servers=(603 17587 18531 8228)
@@ -39,4 +43,4 @@ epoch_seconds=$(date +%s)
 
 # Write to the database, including the timestamp for a precision of seconds versus default nanoseconds
 # Store serverID as a tag rather than a field, as we may want to query on it
-/usr/bin/curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "speedtest,serverid=$selected_server ping=$ping,download=$download,upload=$upload $epoch_seconds"
+/usr/bin/curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "speedtest,serverid=$selected_server ping=$ping,download=$download,upload=$upload $epoch_seconds"

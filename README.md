@@ -459,6 +459,14 @@ I found https://www.cyberpowersystems.com/product/software/power-panel-personal/
   * I had a `diskstats.cron` file there with `\* * * * * /usr/bin/php /boot/myScripts/hdStats.php &> /dev/null`. I've moved it out of the directory and run `update_cron` to reload the crontab without a reboot, and then ran `cat /etc/cron.d/root` to check what the current cron setup was (note that `crontab -l` isn't what you want here)
 
 
+## Authentication
+
+- InfluxDB 2.x is moving to token-based authentication that needs to be passed with each write API call.
+- Influx 1.x has HTTP Basic Auth as authentication, as documented in https://docs.influxdata.com/influxdb/v1.8/administration/authentication_and_authorization/
+- I created a user with write access to the database that I write values to, and need to pass that username and password to `curl` when calling InfluxDB. I can do that by adding the curl flag `-u "$USER:$PASS"` and that will authenticate for me
+- To load the variables from outside the script, I can use `source` to load a file's lines as variables https://linuxize.com/post/bash-source-command which should be portable between running manually and running in Cron.
+
+
 
 ## InfluxDB CLI
 

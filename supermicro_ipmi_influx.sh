@@ -13,6 +13,10 @@ wait_seconds=$(( RANDOM %= 10 ))
 echo "Adding $wait_seconds second wait to introduce jitter..."
 sleep $wait_seconds
 
+# source will load the lines of the credentials file as variables
+# Format in the file is `VARNAME="VARVALUE"` with one per line
+source "/root/creds.source"
+
 # call ipmitool to get all physical sensor data collected by the motherboard, plus upper
 # thresholds. -H defines the IP address to connect, -U for the user, -P for password, and
 # sensor is one of many options for return data. Output data will be pipe-delimited with
@@ -94,5 +98,5 @@ epoch_seconds=$(date +%s)
 
 #Write the data to the database
 printf "\nPosting data to InfluxDB\n\n"
-curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "ipmi,host=x9srw,type=temp cpuTempC=$cpuTempC,systemTempC=$systemTempC,peripheralTempC=$peripheralTempC,pchTempC=$pchTempC,dimmA1TempC=$dimmA1TempC,dimmA2TempC=$dimmA2TempC,dimmB1TempC=$dimmB1TempC,dimmB2TempC=$dimmB2TempC,dimmC1TempC=$dimmC1TempC,dimmC2TempC=$dimmC2TempC,dimmD1TempC=$dimmD1TempC,dimmD2TempC=$dimmD2TempC $epoch_seconds
+curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "ipmi,host=x9srw,type=temp cpuTempC=$cpuTempC,systemTempC=$systemTempC,peripheralTempC=$peripheralTempC,pchTempC=$pchTempC,dimmA1TempC=$dimmA1TempC,dimmA2TempC=$dimmA2TempC,dimmB1TempC=$dimmB1TempC,dimmB2TempC=$dimmB2TempC,dimmC1TempC=$dimmC1TempC,dimmC2TempC=$dimmC2TempC,dimmD1TempC=$dimmD1TempC,dimmD2TempC=$dimmD2TempC $epoch_seconds
 ipmi,host=x9srw,type=fan fan1rpm=$fan1rpm,fan2rpm=$fan2rpm,fan3rpm=$fan3rpm,fan4rpm=$fan4rpm,fan5rpm=$fan5rpm $epoch_seconds"

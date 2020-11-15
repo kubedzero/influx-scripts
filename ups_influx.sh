@@ -13,6 +13,10 @@ wait_seconds=$(( RANDOM %= 10 ))
 echo "Adding $wait_seconds second wait to introduce jitter..."
 sleep $wait_seconds
 
+# source will load the lines of the credentials file as variables
+# Format in the file is `VARNAME="VARVALUE"` with one per line
+source "/root/creds.source"
+
 # store the output of pwrstat -status. Use the full path, otherwise cron can't run it.
 bulkData=$(/usr/sbin/pwrstat -status)
 
@@ -71,7 +75,7 @@ epoch_seconds=$(date +%s)
 printf "\nPosting data to InfluxDB\n\n"
 # write the data to the database if all values are filled
 if [[ $utilVoltage != "UNFILLED" && $outputVoltage != "UNFILLED" && $batteryCapacity != "UNFILLED" && $remainingRuntime != "UNFILLED" && $loadWatts != "UNFILLED" && $loadPercent != "UNFILLED" ]]; then
-    curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary "ups_data,ups=cyberpower utilVoltage=$utilVoltage,outputVoltage=$outputVoltage,batteryCapacity=$batteryCapacity,remainingRuntime=$remainingRuntime,loadWatts=$loadWatts,loadPercent=$loadPercent $epoch_seconds"
+    curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "ups_data,ups=cyberpower utilVoltage=$utilVoltage,outputVoltage=$outputVoltage,batteryCapacity=$batteryCapacity,remainingRuntime=$remainingRuntime,loadWatts=$loadWatts,loadPercent=$loadPercent $epoch_seconds"
 else
     echo "Some value was unfilled, please fix to submit data to InfluxDB"
 fi

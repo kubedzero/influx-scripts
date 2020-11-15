@@ -15,6 +15,10 @@ wait_seconds=$(( RANDOM %= 10 ))
 echo "Adding $wait_seconds second wait to introduce jitter..."
 sleep $wait_seconds
 
+# source will load the lines of the credentials file as variables
+# Format in the file is `VARNAME="VARVALUE"` with one per line
+source "/root/creds.source"
+
 # https://linuxhint.com/bash_loop_list_strings/
 declare -a EspIpArray=(
     "10.1.1.32" # living room NodeMCU with a BMP280, DHT22 (nodemcu1 data feed)
@@ -133,7 +137,7 @@ do
         epoch_seconds=$(date +%s)
 
         # Submit all values as one record to InfluxDB
-        curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary \
+        curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary \
             "environment,host=${EspDestArray[$i-1]} humidity=$humidity,temperaturec=$temperaturec,temperaturef=$temperaturef,pressurehg=$pressurehg,pm100=$pm100,pm250=$pm250,pm1000=$pm1000,uva=$uva,uvb=$uvb,uvindex=$uvindex,tvoc=$tvoc,eco2=$eco2 $epoch_seconds"
     fi
 done

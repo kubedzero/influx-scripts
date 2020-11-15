@@ -15,6 +15,10 @@ wait_seconds=$(( RANDOM %= 10 ))
 echo "Adding $wait_seconds second wait to introduce jitter..."
 sleep $wait_seconds
 
+# source will load the lines of the credentials file as variables
+# Format in the file is `VARNAME="VARVALUE"` with one per line
+source "/root/creds.source"
+
 # List the IP addresses or host names that we'll connect to
 # https://linuxhint.com/bash_loop_list_strings/
 declare -a TasmotaIpArray=(
@@ -83,7 +87,7 @@ do
     epoch_seconds=$(date +%s)
 
     # Submit all values as one record to InfluxDB
-    curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' --data-binary \
+    curl -i -XPOST 'http://influx.brad:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary \
         "tasmota,device=${InfluxDeviceArray[$i-1]} uptime=$uptime_seconds,powerState=$power_state$power_influx_data $epoch_seconds"
 
 done
