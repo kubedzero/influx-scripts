@@ -379,7 +379,7 @@ I found https://www.cyberpowersystems.com/product/software/power-panel-personal/
 
 
 
-##ESXi Memory reading
+## ESXi Memory reading
 
 * I have four 16GB modules installed in my ESXi host.
 * `esxcli hardware memory get` shows ` Physical Memory: 68683657216 Bytes` 

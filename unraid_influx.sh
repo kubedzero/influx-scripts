@@ -192,7 +192,7 @@ echo "Processor CPU Percent values are $influx_cpu_percent"
 
 
 # Validate the data, exiting early if some are empty or unfilled
-if [[ -z "$influx_cpu_percent" && $influx_disk_free == "UNFILLED" && $influx_share_free == "UNFILLED" && $influx_disk_temp == "UNFILLED" && $influx_disk_active == "UNFILLED" ]]; then
+if [[ -z "$influx_cpu_percent" || $influx_disk_free == "UNFILLED" || $influx_share_free == "UNFILLED" || $influx_disk_temp == "UNFILLED" || $influx_disk_active == "UNFILLED" || $influx_mem_info == "UNFILLED" ]]; then
     echo "Some value was unfilled, please fix to submit data to InfluxDB"
     exit 1
 fi
@@ -203,8 +203,8 @@ epoch_seconds=$(date +%s)
 
 # Write the data to the database, one line per measurement
 printf "\nPosting data to InfluxDB\n\n"
-curl -i -XPOST 'http://localhost:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
-unraid,host=poorbox,type=diskTemp $influx_disk_temp $epoch_seconds
+curl -i -XPOST 'http://localhost:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary \
+"unraid,host=poorbox,type=diskTemp $influx_disk_temp $epoch_seconds
 unraid,host=poorbox,type=diskActive $influx_disk_active $epoch_seconds
 unraid,host=poorbox,type=diskFree $influx_disk_free $epoch_seconds
 unraid,host=poorbox,type=shareFree $influx_share_free $epoch_seconds
