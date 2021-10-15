@@ -1,2 +1,4 @@
 creds.source
 .DS_Store
+influx-scripts-python/.idea/
+influx-scripts-python/.python-version

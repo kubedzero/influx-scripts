@@ -1,7 +1,9 @@
-
 import math
 
+from influxdb_client import InfluxDBClient, WritePrecision
+from influxdb_client.client.write_api import SYNCHRONOUS
 from requests import get
+from time import time
 
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
@@ -22,13 +24,13 @@ then to handle fallback, just define the data fields multiple times, and in the 
 
 # Convert temperature in degrees Celsius to degrees Fahrenheit
 def convert_celsius_to_fahrenheit(temp_c):
-    return float(temp_c) * 1.8 + 32
+    return "{:.2f}".format(float(temp_c) * 1.8 + 32)
 
 
 # Convert barometric pressure in Pascals to inches of Mercury
 # https://www.metric-conversions.org/pressure/pascals-to-inches-of-mercury.htm
 def convert_pascals_to_inches_mercury(pressure_pa):
-    return float(pressure_pa) * 0.00029530
+    return "{:.2f}".format(float(pressure_pa) * 0.00029530)
 
 
 # Given the temperature in Celsius and relative humidity in percent, determine the dewpoint
@@ -41,7 +43,7 @@ def convert_pascals_to_inches_mercury(pressure_pa):
 def convert_relative_humidity_temperature_to_dewpoint(temp_c, humidity_percent):
     gamma = math.log(float(humidity_percent) / 100.0) + ((17.62 * float(temp_c)) / (243.5 + float(temp_c)))
     dewpoint_c = 243.5 * gamma / (17.62 - gamma)
-    return dewpoint_c
+    return "{:.2f}".format(dewpoint_c)
 
 
 # These Tuples define the IP address from which to fetch data and the host string stored in InfluxDB for each.
@@ -49,7 +51,8 @@ def convert_relative_humidity_temperature_to_dewpoint(temp_c, humidity_percent):
 ip_addresses_to_influx_hosts = [("10.1.1.32", "nodemcu1"),
                                 ("10.1.1.36", "nodemcu2"),
                                 ("10.1.1.34", "nodemcu3"),
-                                ("10.1.1.35", "nodemcu4")]
+                                ("10.1.1.35", "nodemcu4"),
+                                ("10.1.1.31", "nodemcu5")]
 
 # These Tuples define the names of the fields in InfluxDB, and the ESP-reported field names they are derived from
 # In special cases such as dew point, multiple inputs are needed. We define the Tuple with a nested Tuple in this case
@@ -105,19 +108,17 @@ def parse_data_into_dict(line_list):
     esp_dict = {line_list[0].split(",")[i]: line_list[1].split(",")[i] for i in range(len(line_list[0].split(",")))}
     return esp_dict
 
+
 # Given a dict of ESP field name field value pairs, remove the entries with known bad values
 def filter_bad_values_from_dict(dict):
-    known_bad_value=0
+    known_bad_value = -16384
     for key in list(dict):
-        if float(dict[key]) == known_bad_value or dict[key] == "nan":
+        if float(dict[key]) == known_bad_value or float(dict[key]) == 0 or dict[key] == "nan" or dict[key] == "inf":
             dict.pop(key)
 
 
-
-
-
 def parse_esp_dict_into_influx_dict(esp_dict):
-    influx_dict={}
+    influx_dict = {}
     # Go through all the pre-defined mappings of Influx field name to ESP field name
     for tuple in influx_fields_to_http_fields:
         # Get the Influx field name from the tuple, which we'll
@@ -137,19 +138,48 @@ def parse_esp_dict_into_influx_dict(esp_dict):
                     data_value = convert_pascals_to_inches_mercury(esp_dict[tuple[1]])
                 case _:
                     data_value = esp_dict[tuple[1]]
-            print("Found value of {} for Influx field {}".format(data_value, influx_field_name))
+            print("Found value of [{}] for Influx field [{}]".format(data_value, influx_field_name))
             influx_dict[influx_field_name] = data_value
         except KeyError:
             print("Corresponding data value not found when trying to fetch Influx value {}".format(influx_field_name))
     return influx_dict
 
+
+# Line protocol is `field=value,field2=value2,field3=value3` for the data section
+def parse_influx_dict_into_line_protocol(influx_dict):
+    line_protocol_list=[]
+    for key in influx_dict:
+        line_protocol_list.append("{}={}".format(key, influx_dict[key]))
+    return ",".join(line_protocol_list)
+
+
+def send_data_to_influx(line_protocol_string_list):
+
+    client = InfluxDBClient(url=url, token=token, org=org)
+    write_api = client.write_api(write_options=SYNCHRONOUS)
+    write_api.write(write_precision=WritePrecision.S, bucket=bucket,record=line_protocol_string_list)
+
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    data = fetch_data("10.1.1.36")
-    line_list = str.splitlines(data)
-    validate_data(line_list)
-    esp_dict = parse_data_into_dict(line_list)
-    filter_bad_values_from_dict(esp_dict)
-    influx_dict = parse_esp_dict_into_influx_dict(esp_dict)
+    line_protocol_string_list = []
+    epoch_time_seconds = int(time())
+    for tuple in ip_addresses_to_influx_hosts:
+        current_ip=tuple[0]
+        influx_host_name=tuple[1]
+        try:
+            data = fetch_data(current_ip).replace(" ","")
+        except Exception:
+            print("Could not connect/fetch from IP {}, skipping".format(current_ip))
+            break
+        line_list = str.splitlines(data)
+        validate_data(line_list)
+        esp_dict = parse_data_into_dict(line_list)
+        filter_bad_values_from_dict(esp_dict)
+        influx_dict = parse_esp_dict_into_influx_dict(esp_dict)
+        line_protocol_data_string = parse_influx_dict_into_line_protocol(influx_dict)
+        line_protocol_full_string = "environment,host={} {} {}".format(influx_host_name, line_protocol_data_string,
+                                                                       epoch_time_seconds)
+        line_protocol_string_list.append(line_protocol_full_string)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    send_data_to_influx(line_protocol_string_list)
