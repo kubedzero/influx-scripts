@@ -91,13 +91,11 @@ def parse_data_into_dict(line_list):
 
 
 # Given a dict of ESP field name field value pairs, remove the input dict's entries with known bad values in place
-def filter_bad_values_from_dict(dict):
+def filter_bad_values_from_dict(esp_dict):
     known_bad_value = -16384
-    for key in list(dict):
-        # TODO remove the 0/inf/nan stuff once Arduino code is fixed up
-        # TODO code is fixed for ESP8266, now update ESP32
-        if float(dict[key]) == known_bad_value or float(dict[key]) == 0 or dict[key] == "nan" or dict[key] == "inf":
-            dict.pop(key)
+    for key in list(esp_dict):
+        if float(esp_dict[key]) == known_bad_value:
+            esp_dict.pop(key)
 
 
 # Given a dict of valid ESP data, perform necessary conversions if any and store the output value in a dict
@@ -105,9 +103,9 @@ def filter_bad_values_from_dict(dict):
 def parse_esp_dict_into_influx_dict(esp_dict):
     influx_dict = {}
     # Go through all the pre-defined mappings of Influx field name to ESP field name
-    for tuple in influx_fields_to_http_fields:
+    for influx_http_tuple in influx_fields_to_http_fields:
         # Get the Influx field name from the tuple, which we'll use to handle different cases
-        influx_field_name = tuple[0]
+        influx_field_name = influx_http_tuple[0]
         # Using the new Python 3.10 switch syntax to handle special cases where conversion is needed
         # https://www.blog.pythonlibrary.org/2021/09/16/case-switch-comes-to-python-in-3-10/
         # Wrap in try except to catch instances where the necessary data doesn't exist. We skip the Tuple in that case
@@ -115,16 +113,16 @@ def parse_esp_dict_into_influx_dict(esp_dict):
             match influx_field_name:
                 case "dewpointf":
                     # Use esp_dict[key] rather than esp_dict.get(key) so a KeyError is raised
-                    dewpoint_c = convert_relative_humidity_temperature_to_dewpoint(esp_dict[tuple[1][0]],
-                                                                                   esp_dict[tuple[1][1]])
+                    dewpoint_c = convert_relative_humidity_temperature_to_dewpoint(esp_dict[influx_http_tuple[1][0]],
+                                                                                   esp_dict[influx_http_tuple[1][1]])
                     data_value = convert_celsius_to_fahrenheit(dewpoint_c)
                 case "temperaturef":
-                    data_value = convert_celsius_to_fahrenheit(esp_dict[tuple[1]])
+                    data_value = convert_celsius_to_fahrenheit(esp_dict[influx_http_tuple[1]])
                 case "pressurehg":
-                    data_value = convert_pascals_to_inches_mercury(esp_dict[tuple[1]])
+                    data_value = convert_pascals_to_inches_mercury(esp_dict[influx_http_tuple[1]])
                 case _:
                     # Default case, the raw data from ESP can be saved directly to Influx
-                    data_value = esp_dict[tuple[1]]
+                    data_value = esp_dict[influx_http_tuple[1]]
             print("Found value of [{}] for Influx field [{}]".format(data_value, influx_field_name))
             # Since we're using a dict, only one value for each field name can exist. For that reason, the later
             # values as defined in the field name Tuples will overwrite earlier fields. This allows us to define
@@ -161,9 +159,9 @@ def collect_and_write_esp_sensor_readings():
     # Get the current time since Epoch in seconds, which we'll use when writing lines to Influx
     epoch_time_seconds = int(time())
     # Iterate through each tuple of IP and Influx host name
-    for tuple in ip_addresses_to_influx_hosts:
-        current_ip = tuple[0]
-        influx_host_name = tuple[1]
+    for ip_to_host_tuple in ip_addresses_to_influx_hosts:
+        current_ip = ip_to_host_tuple[0]
+        influx_host_name = ip_to_host_tuple[1]
         try:
             # Get the data from the current IP, removing any whitespace as it should be CSV
             data = fetch_data(current_ip).replace(" ", "")
