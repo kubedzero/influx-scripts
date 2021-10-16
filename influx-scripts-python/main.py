@@ -7,11 +7,11 @@ from requests import get
 
 # These Tuples define the IP address from which to fetch data and the host string stored in InfluxDB for each.
 # This way, if the IP address changes, an update can be made to keep the data going to the same tag in Influx
-ip_addresses_to_influx_hosts = [("10.1.1.32", "nodemcu1"),
-                                ("10.1.1.36", "nodemcu2"),
-                                ("10.1.1.34", "nodemcu3"),
-                                ("10.1.1.35", "nodemcu4"),
-                                ("10.1.1.31", "nodemcu5")]
+ip_addresses_to_influx_hosts = [("10.1.1.31", "nodemcu3"),
+                                ("10.1.1.32", "nodemcu1"),
+                                ("10.1.1.33", "nodemcu4"),
+                                ("10.1.1.34", "nodemcu2"),
+                                ("10.1.1.35", "nodemcu5")]
 
 # These Tuples define the names of the fields in InfluxDB, and the ESP-reported field names they are derived from.
 # In special cases such as dew point, multiple inputs are needed. We define the Tuple with a nested Tuple in this case
@@ -95,6 +95,7 @@ def filter_bad_values_from_dict(dict):
     known_bad_value = -16384
     for key in list(dict):
         # TODO remove the 0/inf/nan stuff once Arduino code is fixed up
+        # TODO code is fixed for ESP8266, now update ESP32
         if float(dict[key]) == known_bad_value or float(dict[key]) == 0 or dict[key] == "nan" or dict[key] == "inf":
             dict.pop(key)
 
@@ -144,13 +145,16 @@ def parse_influx_dict_into_line_protocol(influx_dict):
 
 # Use the Influx Python Client to call the Influx 2.0 write API to batch-write the Line Protocol for all new data
 def send_data_to_influx(line_protocol_string_list):
-
+    # TODO move this to a file that doesn't need to be committed, or provide default values
+    # TODO move influx writing to a helper class so it can be used across different Python scripts
     client = InfluxDBClient(url=url, token=token, org=org)
     write_api = client.write_api(write_options=SYNCHRONOUS)
     write_api.write(write_precision=WritePrecision.S, bucket=bucket, record=line_protocol_string_list)
 
 
 # Top-level ESP data-gathering function to orchestrate all the other calls in this file
+# TODO move this to an esp-specific python file so main can be log setup and switching between different updates
+# TODO maybe make this return the list of line protocol, and then we can merge them all together for writing to Influx
 def collect_and_write_esp_sensor_readings():
     # Instantiate a list that we'll store lines of Line Protocol to write to Influx
     line_protocol_string_list = []
