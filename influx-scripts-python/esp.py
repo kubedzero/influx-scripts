@@ -1,19 +1,18 @@
+from random import randint
+from time import time, sleep
+
 from math import log
-from time import time
+from requests import get, RequestException
 
-from influxdb_client import InfluxDBClient, WritePrecision
-from influxdb_client.client.write_api import SYNCHRONOUS
-from requests import get
-
-from my_credentials import INFLUX_URL, INFLUX_BUCKET, INFLUX_ORG, INFLUX_TOKEN
+from influx_writer import send_data_to_influx
 
 # These Tuples define the IP address from which to fetch data and the host string stored in InfluxDB for each.
 # This way, if the IP address changes, an update can be made to keep the data going to the same tag in Influx
-ip_addresses_to_influx_hosts = [("10.1.1.31", "nodemcu3"),  # office with pms7003 esp32
-                                ("10.1.1.32", "nodemcu1"),  # bathroom/living node1
-                                ("10.1.1.33", "nodemcu4"),  # bathroom/living node2
-                                ("10.1.1.34", "nodemcu2"),  # bedroom geek1
-                                ("10.1.1.35", "nodemcu5")]  # bathroom geek2
+ip_addresses_to_influx_hosts = [("10.1.1.31", "nodemcu3"),  # bedroom BME PMS SGP esp32
+                                ("10.1.1.37", "nodemcu1"),  # office DHT VEML node1
+                                ("10.1.1.36", "nodemcu4"),  # frontBath BMP DHT amica1
+                                ("10.1.1.34", "nodemcu2"),  # living BME SGP geek1
+                                ("10.1.1.35", "nodemcu5")]  # backBath DHT SGP geek2
 
 # These Tuples define the names of the fields in InfluxDB, and the ESP-reported field names they are derived from.
 # In special cases such as dew point, multiple inputs are needed. We define the Tuple with a nested Tuple in this case
@@ -94,9 +93,10 @@ def parse_data_into_dict(line_list):
 
 # Given a dict of ESP field name field value pairs, remove the input dict's entries with known bad values in place
 def filter_bad_values_from_dict(esp_dict):
-    known_bad_value = -16384
+    known_bad_value_float = -16384
+    known_bad_value_string = "nan"
     for key in list(esp_dict):
-        if float(esp_dict[key]) == known_bad_value:
+        if (esp_dict[key] == known_bad_value_string) or (float(esp_dict[key]) == known_bad_value_float):
             esp_dict.pop(key)
 
 
@@ -143,18 +143,9 @@ def parse_influx_dict_into_line_protocol(influx_dict):
     return ",".join(line_protocol_list)
 
 
-# Use the Influx Python Client to call the Influx 2.0 write API to batch-write the Line Protocol for all new data
-def send_data_to_influx(line_protocol_string_list):
-    # TODO move influx writing to a helper class so it can be used across different Python scripts
-    client = InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=INFLUX_ORG)
-    write_api = client.write_api(write_options=SYNCHRONOUS)
-    write_api.write(write_precision=WritePrecision.S, bucket=INFLUX_BUCKET, record=line_protocol_string_list)
-
-
 # Top-level ESP data-gathering function to orchestrate all the other calls in this file
 # TODO move this to an esp-specific python file so main can be log setup and switching between different updates
 # TODO maybe make this return the list of line protocol, and then we can merge them all together for writing to Influx
-# TODO make this wait between 0 and 10 seconds
 def collect_and_write_esp_sensor_readings():
     # Instantiate a list that we'll store lines of Line Protocol to write to Influx
     line_protocol_string_list = []
@@ -162,16 +153,16 @@ def collect_and_write_esp_sensor_readings():
     epoch_time_seconds = int(time())
     # Iterate through each tuple of IP and Influx host name
     for ip_to_host_tuple in ip_addresses_to_influx_hosts:
-        # TODO add better logging in fewer lines
         current_ip = ip_to_host_tuple[0]
         influx_host_name = ip_to_host_tuple[1]
+        print("\n\nChecking IP {} with Influx Host Name {}\n".format(current_ip, influx_host_name))
         try:
             # Get the data from the current IP, removing any whitespace as it should be CSV
             data = fetch_data(current_ip).replace(" ", "")
-        except Exception:
-            # Don't exit on an Exception when getting data, rather skipping that particular IP
+        except RequestException:
+            # Don't exit on an Exception when getting data, rather skipping the current IP
             print("Could not connect/fetch from IP {}, skipping".format(current_ip))
-            break
+            continue
         # Split the ESP data into separate lines
         line_list = str.splitlines(data)
         # Validate that the data is in a parseable format
@@ -194,4 +185,7 @@ def collect_and_write_esp_sensor_readings():
 
 
 if __name__ == '__main__':
+    wait_seconds = randint(0, 10)
+    print("Adding {} second(s) of jitter before executing".format(wait_seconds))
+    sleep(wait_seconds)
     collect_and_write_esp_sensor_readings()

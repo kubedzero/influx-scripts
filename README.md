@@ -499,3 +499,21 @@ I found https://www.cyberpowersystems.com/product/software/power-panel-personal/
   * Adding `LIMIT 10` will limit to 10 results
   * `select * FROM "diskstats" ORDER BY time DESC LIMIT 10` combines both of these
 
+
+
+# PyEnv on macOS
+
+- I had Python 3.10 installed via homebrew (`brew install python@3.10`, remove with `python remove python@3.10`) which is used by other homebrew programs. I shouldn't touch it. 
+- I have PyEnv installed via homebrew, which has a built in Python installer (`pyenv install 3.11`) which is the preferred method for installing versions of Python for development. I can then set the global/shimmed version of python (aka the shim) to Python 3.11 with (`pyenv global 3.11`). I also did `pyenv rehash` and `pyenv uninstall 3.10.4` to remove the old version. Same with `/Users/kz/.pyenv/shims/pip` for `which -a pip`. I need to install pipenv as well with `pip install pipenv` which installs pipenv for python 3.11
+- `which -a python3` shows `/Users/kz/.pyenv/shims/python3` as the first option, which is good
+- In PyCharm, an interpreter will need to be set up which is basically the SDK in IntelliJ, defining the Python version and where dependencies should be installed. PipEnv is preferred. I have the Interpreter Python pointing to `/Users/kz/.pyenv/shims/python3` and the PipEnv executable pointing to` /Users/kz/.pyenv/shims/pipenv`. It then took me to a new screen showing the virtualenv directory to be `/Users/kz/.local/share/virtualenvs/influx-scripts-python-6UM8dtAr/bin/python`.
+- However, running `python3 --version` resulted in 3.9.6 so I think this is an old environment that needs updating. 
+- I made sure `python_version = "3.11"` was configured in the Pipfile
+- I think I might just have to delete `/Users/kz/.local/share/virtualenvs/influx-scripts-python-6UM8dtAr` and allow the interpreter setup in PyCharm to recreate it.
+- That worked! PyCharm now reports Python 3.11.1 is being used, perfect.
+
+
+# PyEnv on CentOS
+- I ran `pyenv install 3.11` and got only alphas and dev versions available. However, it gave a hint that pyenv should be updated to get other versions. Sure enough, I ran `cd /root/.pyenv/plugins/python-build/../.. && git pull && cd -` as it told me to do, and then ran the install again and 3.11.1 installed! 
+- I had to run the same `pyenv global 3.11.1` and `pyenv uninstall 3.10.0` and `pyenv rehash` but I also had to run `pyenv local 3.11.1` from within the `/root/influx-scripts-python` to make sure it was using the right version, which I only found out after running `pyenv local` and finding it still using 3.10.0. Once I fixed that, I could run `pip install pipenv`
+- I then copied over all the new files with `scp ~/GitHub/kubedzero/influx-scripts/influx-scripts-python/* root@centos:/root/influx-scripts-python/` and got `FileNotFoundError: [Errno 2] No such file or directory: '/root/.local/share/virtualenvs/influx-scripts-python-2wO9Mla4/bin/python'` so I deleted the virtualenv and restarted the creation with `pipenv install` which reinstalled the dependencies and seemed to work perfectly. 
