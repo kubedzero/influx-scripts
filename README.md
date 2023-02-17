@@ -366,6 +366,69 @@ I found https://www.cyberpowersystems.com/product/software/power-panel-personal/
 
 
 
+## APC SMART-UPS 1500 Read Data
+
+- I replaced the CyberPower UPS with an APC UPS
+- I briefly tried experimenting with Network-UPS-Tools, or NUT, but the setup was more complex than I needed it to be and I had issues getting the driver and server initializing at boot
+- There's an APC-specific utility `dnf install -y apcupsd` that I opted to use instead.
+  - http://www.apcupsd.org/manual/manual.html
+  - https://linux.die.net/man/8/apcupsd
+
+- It starts a daemon called `apcupsd` that then allows a command `apcaccess` to be called that prints out all UPS data:
+
+```
+APC      : 001,043,1002
+DATE     : 2023-02-17 09:05:28 -0500
+HOSTNAME : CENTOS-VM
+VERSION  : 3.14.14 (31 May 2016) redhat
+UPSNAME  : CENTOS-VM
+CABLE    : USB Cable
+DRIVER   : USB UPS Driver
+UPSMODE  : Stand Alone
+STARTTIME: 2023-02-17 09:04:22 -0500
+MODEL    : Smart-UPS 1500
+STATUS   : ONLINE
+LINEV    : 123.1 Volts
+LOADPCT  : 11.0 Percent
+BCHARGE  : 100.0 Percent
+TIMELEFT : 93.0 Minutes
+MBATTCHG : 5 Percent
+MINTIMEL : 3 Minutes
+MAXTIME  : 0 Seconds
+OUTPUTV  : 123.1 Volts
+SENSE    : High
+DWAKE    : -1 Seconds
+DSHUTD   : 180 Seconds
+LOTRANS  : 106.0 Volts
+HITRANS  : 127.0 Volts
+RETPCT   : 0.0 Percent
+ITEMP    : 32.8 C
+ALARMDEL : 30 Seconds
+BATTV    : 27.4 Volts
+LINEFREQ : 60.0 Hz
+LASTXFER : Low line voltage
+NUMXFERS : 0
+TONBATT  : 0 Seconds
+CUMONBATT: 0 Seconds
+XOFFBATT : N/A
+SELFTEST : NO
+STESTI   : 14 days
+STATFLAG : 0x05000008
+MANDATE  : 2005-04-05
+SERIALNO : AS0123450311
+BATTDATE : 2023-01-06
+NOMOUTV  : 120 Volts
+NOMBATTV : 24.0 Volts
+FIRMWARE : 601.3.D USB FW:1.5
+END APC  : 2023-02-17 09:05:30 -0500
+```
+
+- It also has a utility `apctest` that can only be run when `apcupsd` is not running (for example with `systemctl stop apcupsd`) and then gives an interactive prompt to change settings, such as cutover voltage, voltage sensitivity, battery manufacture date, self-test interval, and more. 
+- Anyway, `apcaccess` has parameters to output specific values, and without the units. That way I can run `apcaccess -u -p LINEV` and get the line voltage back as `122.2` which is super easy to parse in a script and send to Influx. If it fails for whatever reason (say `apcupsd` is not running) it will output `Error contacting apcupsd @ localhost:3551: Connection refused` and an exit code of 1. Since `set -e` is being used, that will halt the script before it can continue to submit bad data. 
+- At some point I might investigate tracking the NUMXFERS or CUMONBATT or TONBATT values, as that could tell me how often the UPS is saving us from power outages
+
+
+
 ## IPMI ESXi sensor readings
 
 * Installed IPMITool with `yum install ipmitool` on CentOS
