@@ -24,11 +24,13 @@ echo "Reading values using apcaccess"
 utilVoltage=$(/usr/sbin/apcaccess -u -p  LINEV)
 upsTemp=$(/usr/sbin/apcaccess -u -p  ITEMP)
 loadPercent=$(/usr/sbin/apcaccess -u -p  LOADPCT)
+transferCount=$(/usr/sbin/apcaccess -u -p  NUMXFERS)
 
 
 echo "utilVoltage is $utilVoltage"
 echo "upsTemp is $upsTemp"
-echo -e "loadPercent is $loadPercent\n"
+echo "loadPercent is $loadPercent"
+echo -e "transferCount is $transferCount\n"
 
 # Get seconds since Epoch, which is timezone-agnostic
 # https://serverfault.com/questions/151109/how-do-i-get-the-current-unix-time-in-milliseconds-in-bash
@@ -36,4 +38,4 @@ epoch_seconds=$(date +%s)
 
 printf "\nPosting data to InfluxDB\n\n"
 # write the data to the database. No need to check if values are filled because they would exit if empty.
-curl -i -XPOST 'http://localhost:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "ups_data,ups=apc utilVoltage=$utilVoltage,upsTemp=$upsTemp,loadPercent=$loadPercent $epoch_seconds"
+curl -i -XPOST 'http://localhost:8086/write?db=local_reporting&precision=s' -u "$INFLUX1USER:$INFLUX1PASS" --data-binary "ups_data,ups=apc utilVoltage=$utilVoltage,upsTemp=$upsTemp,loadPercent=$loadPercent,transferCount=$transferCount $epoch_seconds"
