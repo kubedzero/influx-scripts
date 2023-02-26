@@ -427,7 +427,20 @@ END APC  : 2023-02-17 09:05:30 -0500
 - Anyway, `apcaccess` has parameters to output specific values, and without the units. That way I can run `apcaccess -u -p LINEV` and get the line voltage back as `122.2` which is super easy to parse in a script and send to Influx. If it fails for whatever reason (say `apcupsd` is not running) it will output `Error contacting apcupsd @ localhost:3551: Connection refused` and an exit code of 1. Since `set -e` is being used, that will halt the script before it can continue to submit bad data. 
 - At some point I might investigate tracking the NUMXFERS or CUMONBATT or TONBATT values, as that could tell me how often the UPS is saving us from power outages
 
+## APC Smart-UPS 750 Read Data
 
+- http://www.apcupsd.org/manual/manual.html#modbus-driver When trying to adapt `apcupsd` to the new SMT750 though, it had only the most basic information outputting in USB mode. I had to update the configuration to `UPSTYPE modbus` and then I was able to get far more detailed output, pretty much the same as with teh DLA1500. The only problem I found is that the data would stop updating after a few minutes, as if the modbus code didn't work fully. I would see the STARTTIME value in the output stop updating, and just spit out the same values over and over. `apcupsd` was still working since killing it would give "connection refused" messages, but it seems as if the modbus code is more half-baked. Sad.
+- NUT (Network UPS Tools) splits its architecture into a Driver layer and a Server layer. Sadly for the Driver layer, it just ends up using `apcupsd` so even if I switched over to NUT for outputting data, it wouldn't help here. 
+- My other option, now that I have the NMC, is to remove the UPS cable entirely and do monitoring over the network. This was always the objective, to keep cabling more simple. 
+- https://www.apc.com/us/en/faqs/FA156048/ notes that "the APC PowerNet MIB file is required. The APC PowerNet reference guide for all supported products can be downloaded from the main APC website, by searching for "Powernet", or looking for SKU "SFPMIB""
+  - I did this, and found 4.4.1 is the latest https://www.apc.com/us/en/product/SFPMIB441/powernet-mib-v4-4-1/. 
+  - On that 4.4.1 page there is a link to download https://download.schneider-electric.com/files?p_enDocType=Firmware&p_File_Name=powernet441.mib&p_Doc_Ref=APC_POWERNETMIB_441_EN
+  - I used this with Ireasoning MIB Browser on macOS https://www.ireasoning.com/mibbrowser.shtml  to find the values I wanted. I enabled SNMP v1 on the NMC while doing this testing, and disabled it in favor of SNMPv3 afterwards
+- On macOS, `snmpget -v 1 -c public -O qUv apc.brad .1.3.6.1.4.1.318.1.1.1.3.3.1.0` outputs `1209`. Explaining the inputs: -v 1 sets to SNMP version 1, -c public sets the Community to Public, -O qUv sets output options of "quick print for easier parsing," "don't print units," and "print values only (not OID = value)." That allows us to get just the raw value as output, nice. 
+      - Now let's try with SNMPV3, which doesn't use community and instead needs a SecurityName input
+          - `snmpget -v 3 -u centos -O qUv apc.brad .1.3.6.1.4.1.318.1.1.1.3.3.1.0` does the trick! That also outputs 1209, perfect
+      - Another fun trick is that multiple OIDs can be passed in with a single call. So `snmpget -v 3 -u centos -O qUv apc.brad .1.3.6.1.4.1.318.1.1.1.3.3.1.0 .1.3.6.1.4.1.318.1.1.1.2.3.2.0` outputs two lines, one with each OID output. With that, a single call could be made, and then parsed into separate variables. Theoretically that could keep execution effort down, but would make the script more complicated
+      - I can use https://stackoverflow.com/questions/12722095/how-do-i-use-floating-point-arithmetic-in-bash to divide by 10 and round to a certain number of decimal places to adjust the high-precision Integer values into Float/Decimal Strings to pass into InfluxDB
 
 ## IPMI ESXi sensor readings
 
