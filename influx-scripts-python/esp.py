@@ -19,12 +19,16 @@ ip_addresses_to_influx_hosts = [("10.1.1.31", "nodemcu3"),  # bedroom BME PMS SG
 # NOTE: These are defined in order of preference, ascending. Where there are repeated Influx fields (to cover duplicate
 # sensors and fallbacks), the last-listed sensor in a non-erroneous state will be output.
 influx_fields_to_http_fields = [("humidity", "dhtHumidityPercent"),
+                                ("humidity", "scdHumidityPercent"),
                                 ("humidity", "boschHumidityPercent"),
                                 ("temperaturec", "dhtTemperatureC"),
+                                ("temperaturec", "scdTemperatureC"),
                                 ("temperaturec", "boschTemperatureC"),
                                 ("temperaturef", "dhtTemperatureC"),
+                                ("temperaturef", "scdTemperatureC"),
                                 ("temperaturef", "boschTemperatureC"),
                                 ("dewpointf", ("dhtTemperatureC", "dhtHumidityPercent")),
+                                ("dewpointf", ("scdTemperatureC", "scdHumidityPercent")),
                                 ("dewpointf", ("boschTemperatureC", "boschHumidityPercent")),
                                 ("pressurehg", "boschPressurePa"),
                                 ("pm100", "pmsPm10Standard"),
@@ -37,7 +41,8 @@ influx_fields_to_http_fields = [("humidity", "dhtHumidityPercent"),
                                 ("uvb", "vemlUVB"),
                                 ("uvindex", "vemlUVIndex"),
                                 ("tvoc", "sgpTVOC"),
-                                ("eco2", "sgpECO2")]
+                                ("eco2", "sgpECO2"),
+                                ("co2", "scdCO2")]
 
 
 # Convert temperature from degrees Celsius to degrees Fahrenheit
