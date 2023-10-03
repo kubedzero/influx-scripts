@@ -8,11 +8,11 @@ from influx_writer import send_data_to_influx
 
 # These Tuples define the IP address from which to fetch data and the host string stored in InfluxDB for each.
 # This way, if the IP address changes, an update can be made to keep the data going to the same tag in Influx
-ip_addresses_to_influx_hosts = [("10.1.1.31", "nodemcu3"),  # bedroom BME PMS SGP esp32
-                                ("10.1.1.37", "nodemcu1"),  # office DHT VEML node1
-                                ("10.1.1.36", "nodemcu4"),  # frontBath BMP DHT amica1
-                                ("10.1.1.34", "nodemcu2"),  # living BME SGP geek1
-                                ("10.1.1.35", "nodemcu5")]  # backBath DHT SGP geek2
+ip_addresses_to_influx_hosts = [("10.1.1.31", "nodemcu3"),  # office esp32 Feather BME280 PMS7003 SGP30
+                                ("10.1.1.37", "nodemcu1"),  # bed amica2 DHT22 BME280
+                                ("10.1.1.36", "nodemcu2"),  # bathroom amica1 DHT22 BME280
+                                ("10.1.1.34", "nodemcu4"),  # couch geek1 SCD40 SGP30 (adafruit) BME280
+                                ("10.1.1.35", "nodemcu5")]  # bedbath geek2 SGP30
 
 # These Tuples define the names of the fields in InfluxDB, and the ESP-reported field names they are derived from.
 # In special cases such as dew point, multiple inputs are needed. We define the Tuple with a nested Tuple in this case
