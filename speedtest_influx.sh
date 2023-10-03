@@ -20,7 +20,8 @@ source "/root/creds.source"
 
 # Define an array of the speedtest server IDs we want to use, and pick a random one
 # https://www.christianroessler.net/tech/2015/bash-array-random-element.html
-speedtest_servers=(603 17587 18531 8228)
+# San Francisco Speedtest Servers: speedtest_servers=(603 17587 18531 8228)
+speedtest_servers=(12188 13098 16976 16888 21016 34335 35055 36009 21313 20326)
 selected_server=${speedtest_servers[$RANDOM % ${#speedtest_servers[@]}]}
 
 # Run the speedtest https://www.speedtest.net/apps/cli
@@ -31,7 +32,7 @@ echo "Running speed test, this may take a few seconds..."
 speedtest_result=$(/usr/bin/speedtest --server-id="$selected_server" --precision=0 --progress=no)
 
 # Use `awk` to get the numerical values from the lines
-ping=$(echo "$speedtest_result" | awk '/Latency/{print $2}')
+ping=$(echo "$speedtest_result" | awk '/Latency/{print $3}')
 download=$(echo "$speedtest_result" | awk '/Download/{print $3}')
 upload=$(echo "$speedtest_result" | awk '/Upload/{print $3}')
 
