@@ -24,12 +24,24 @@ source "/root/creds.source"
 declare -a TasmotaIpArray=(
     "lamp.brad" # Lightstory WP5 plug controlling a lamp
     "tv.brad" # Oittm WS01 in-wall outlet controlling  a TV
+    "hvac1.brad" # Sonoff POWR316D 16A 240v smart switch
+    "hvac2.brad" # Sonoff POWR3 25A 240v smart switch
+    "fridge.brad" # Sonoff S31 15A 120v smart switch
+    "blanket.brad" # Sonoff S31 15A 120v smart switch
+    "kitchen.brad" # Sonoff S31 15A 120v smart switch
+    "server-switch.brad" # Sonoff S31 15A 120v smart switch
 )
 
 # List the device names that will be sent to InfluxDB. This should be a 1:1 mapping with the above array
 declare -a InfluxDeviceArray=(
     "lamp"
     "tv"
+    "hvac1"
+    "hvac2"
+    "fridge"
+    "blanket"
+    "kitchen"
+    "server"
 )
 
 # Iterate the string array using for loop
