@@ -1,7 +1,7 @@
+from math import log
 from random import randint
 from time import time, sleep
 
-from math import log
 from requests import get, RequestException
 
 from influx_writer import send_data_to_influx
@@ -15,7 +15,7 @@ ip_addresses_to_influx_hosts = [("10.1.1.31", "nodemcu3"),  # office esp32 Feath
                                 ("10.1.1.35", "nodemcu5")]  # bedbath geek2 SGP30
 
 # These Tuples define the names of the fields in InfluxDB, and the ESP-reported field names they are derived from.
-# In special cases such as dew point, multiple inputs are needed. We define the Tuple with a nested Tuple in this case
+# In special cases such as dew point, multiple inputs are needed, and are defined with a nested Tuple in this case
 # NOTE: These are defined in order of preference, ascending. Where there are repeated Influx fields (to cover duplicate
 # sensors and fallbacks), the last-listed sensor in a non-erroneous state will be output.
 influx_fields_to_http_fields = [("humidity", "dhtHumidityPercent"),
@@ -111,11 +111,11 @@ def parse_esp_dict_into_influx_dict(esp_dict):
     influx_dict = {}
     # Go through all the pre-defined mappings of Influx field name to ESP field name
     for influx_http_tuple in influx_fields_to_http_fields:
-        # Get the Influx field name from the tuple, which we'll use to handle different cases
+        # Get the Influx field name from the tuple, which is used to handle different cases
         influx_field_name = influx_http_tuple[0]
         # Using the new Python 3.10 switch syntax to handle special cases where conversion is needed
         # https://www.blog.pythonlibrary.org/2021/09/16/case-switch-comes-to-python-in-3-10/
-        # Wrap in try except to catch instances where the necessary data doesn't exist. We skip the Tuple in that case
+        # Wrap in try except to catch instances where the necessary data doesn't exist. Skip the Tuple in that case
         try:
             match influx_field_name:
                 case "dewpointf":
@@ -131,7 +131,7 @@ def parse_esp_dict_into_influx_dict(esp_dict):
                     # Default case, the raw data from ESP can be saved directly to Influx
                     data_value = esp_dict[influx_http_tuple[1]]
             print("Found value of [{}] for Influx field [{}]".format(data_value, influx_field_name))
-            # Since we're using a dict, only one value for each field name can exist. For that reason, the later
+            # Since a dict is used, only one value for each field name can exist. For that reason, the later
             # values as defined in the field name Tuples will overwrite earlier fields. This allows us to define
             # fallback, or less preferred values by processing them first. DHT and then Bosch, for example.
             influx_dict[influx_field_name] = data_value
@@ -150,11 +150,11 @@ def parse_influx_dict_into_line_protocol(influx_dict):
 
 # Top-level ESP data-gathering function to orchestrate all the other calls in this file
 # TODO move this to an esp-specific python file so main can be log setup and switching between different updates
-# TODO maybe make this return the list of line protocol, and then we can merge them all together for writing to Influx
+# TODO maybe make this return the list of line protocol, and then all can be merged together for writing to Influx
 def collect_and_write_esp_sensor_readings():
-    # Instantiate a list that we'll store lines of Line Protocol to write to Influx
+    # Instantiate a list to store lines of Line Protocol to write to Influx
     line_protocol_string_list = []
-    # Get the current time since Epoch in seconds, which we'll use when writing lines to Influx
+    # Get the current time since Epoch in seconds, which is used when writing lines to Influx
     epoch_time_seconds = int(time())
     # Iterate through each tuple of IP and Influx host name
     for ip_to_host_tuple in ip_addresses_to_influx_hosts:
@@ -185,8 +185,9 @@ def collect_and_write_esp_sensor_readings():
                                                                        epoch_time_seconds)
         # Add the completed Line Protocol to the list of Line Protocol to write to Influx
         line_protocol_string_list.append(line_protocol_full_string)
-    # Perform the write to Influx
+    print("Writing data from {} ESP devices into InfluxDB".format(len(line_protocol_string_list)))
     send_data_to_influx(line_protocol_string_list)
+    print("Completed writing ESP data to Influx!")
 
 
 if __name__ == '__main__':
