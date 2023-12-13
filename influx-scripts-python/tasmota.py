@@ -15,7 +15,11 @@ ip_addresses_to_influx_hosts = [("lamp.brad", "lamp"),
                                 ("fridge.brad", "fridge"),
                                 ("blanket.brad", "blanket"),
                                 ("kitchen.brad", "kitchen"),
-                                ("server-switch.brad", "server")]
+                                ("server-switch.brad", "server"),
+                                ("ct-desk.brad", "ctdesk"),
+                                ("jb-desk.brad", "jbdesk"),
+                                ("heater", "heater"),
+                                ("kitchen2.brad", "kitchen2")]
 
 # These Tuples define the names of the fields in InfluxDB, and the Tasmota-reported field names they are derived from.
 influx_fields_to_http_fields = [("kilowattHours", "StatusSNS.ENERGY.Total"),
