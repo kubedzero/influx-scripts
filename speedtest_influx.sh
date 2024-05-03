@@ -21,8 +21,10 @@ source "/root/creds.source"
 # Define an array of the speedtest server IDs we want to use, and pick a random one
 # https://www.christianroessler.net/tech/2015/bash-array-random-element.html
 # San Francisco Speedtest Servers: speedtest_servers=(603 17587 18531 8228)
-speedtest_servers=(12188 13098 16976 16888 21016 35055 36009 21313 20326)
-selected_server=${speedtest_servers[$RANDOM % ${#speedtest_servers[@]}]}
+speedtest_servers=(13098 16976 16888 21016 35055 21313 20326)
+server_count=${#speedtest_servers[@]}
+selected_server_index=$(($RANDOM % $server_count))
+selected_server=${speedtest_servers[$selected_server_index]}
 
 # Run the speedtest https://www.speedtest.net/apps/cli
 # - Use the randomly selected server from the list
