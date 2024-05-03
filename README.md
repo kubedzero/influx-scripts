@@ -4,7 +4,7 @@ This repository captures the various scripts used to capture the state of variou
 
 
 
-## Bash Versions
+# Bash Versions
 
 * Bash 3.x or 4.x is commonly installed by default, but one of the utilities I wanted to use, `readarray -d` is only available in newer versions.
 
@@ -43,7 +43,7 @@ This repository captures the various scripts used to capture the state of variou
 
 
 
-## Shell Scripts
+# Shell Scripts
 
 * Most of my scripts are done entirely using Bash/CLI commands, as opposed to writing Python, Perl, PHP, or other scripts. 
 * https://www.shellcheck.net/ can offer suggestions on optimizing or bug fixing shell scripts
@@ -57,7 +57,7 @@ This repository captures the various scripts used to capture the state of variou
 
 
 
-## Pip
+# Pip
 
 * Package installer for Python
 
@@ -85,7 +85,7 @@ This repository captures the various scripts used to capture the state of variou
 
 
 
-## Bash Tricks
+# Bash Tricks
 
 * `printf '%s\n' "${my_array[@]}"` to print array elements on separate lines https://stackoverflow.com/questions/15691942/print-array-elements-on-separate-lines-in-bash 
 
@@ -322,7 +322,7 @@ This repository captures the various scripts used to capture the state of variou
 
 
 
-## Cron
+# Cron
 
 * We want to collect data on a regular basis, so using Cron and Crontab to periodically run the scripts is the best way of going about it. 
 * `crontab -e` will open Cron for editing in Vim. 
@@ -338,7 +338,7 @@ This repository captures the various scripts used to capture the state of variou
 
 
 
-## Cyberpower CP1350PFCLCD Read Data
+# Cyberpower CP1350PFCLCD Read Data
 
 I found https://www.cyberpowersystems.com/product/software/power-panel-personal/powerpanel-for-linux/ which allows a utility like `pwrstat -status` to print out the following:
 
@@ -366,7 +366,7 @@ I found https://www.cyberpowersystems.com/product/software/power-panel-personal/
 
 
 
-## APC SMART-UPS 1500 Read Data
+# APC SMART-UPS 1500 Read Data
 
 - I replaced the CyberPower UPS with an APC UPS
 - I briefly tried experimenting with Network-UPS-Tools, or NUT, but the setup was more complex than I needed it to be and I had issues getting the driver and server initializing at boot
@@ -427,7 +427,7 @@ END APC  : 2023-02-17 09:05:30 -0500
 - Anyway, `apcaccess` has parameters to output specific values, and without the units. That way I can run `apcaccess -u -p LINEV` and get the line voltage back as `122.2` which is super easy to parse in a script and send to Influx. If it fails for whatever reason (say `apcupsd` is not running) it will output `Error contacting apcupsd @ localhost:3551: Connection refused` and an exit code of 1. Since `set -e` is being used, that will halt the script before it can continue to submit bad data. 
 - At some point I might investigate tracking the NUMXFERS or CUMONBATT or TONBATT values, as that could tell me how often the UPS is saving us from power outages
 
-## APC Smart-UPS 750 Read Data
+# APC Smart-UPS 750 Read Data
 
 - http://www.apcupsd.org/manual/manual.html#modbus-driver When trying to adapt `apcupsd` to the new SMT750 though, it had only the most basic information outputting in USB mode. I had to update the configuration to `UPSTYPE modbus` and then I was able to get far more detailed output, pretty much the same as with teh DLA1500. The only problem I found is that the data would stop updating after a few minutes, as if the modbus code didn't work fully. I would see the STARTTIME value in the output stop updating, and just spit out the same values over and over. `apcupsd` was still working since killing it would give "connection refused" messages, but it seems as if the modbus code is more half-baked. Sad.
 - NUT (Network UPS Tools) splits its architecture into a Driver layer and a Server layer. Sadly for the Driver layer, it just ends up using `apcupsd` so even if I switched over to NUT for outputting data, it wouldn't help here. 
@@ -442,7 +442,7 @@ END APC  : 2023-02-17 09:05:30 -0500
       - Another fun trick is that multiple OIDs can be passed in with a single call. So `snmpget -v 3 -u centos -O qUv apc.brad .1.3.6.1.4.1.318.1.1.1.3.3.1.0 .1.3.6.1.4.1.318.1.1.1.2.3.2.0` outputs two lines, one with each OID output. With that, a single call could be made, and then parsed into separate variables. Theoretically that could keep execution effort down, but would make the script more complicated
       - I can use https://stackoverflow.com/questions/12722095/how-do-i-use-floating-point-arithmetic-in-bash to divide by 10 and round to a certain number of decimal places to adjust the high-precision Integer values into Float/Decimal Strings to pass into InfluxDB
 
-## IPMI ESXi sensor readings
+# IPMI ESXi sensor readings
 
 * Installed IPMITool with `yum install ipmitool` on CentOS
 * I found that setting up an Administrator user in the IPMI Supermicro web UI and running `ipmitool -H x9srw.brad -U ipminetworkuser -P ipminetworkpass sensor` yielded pipe-character separated columns for each sensor installed. 
@@ -455,7 +455,7 @@ END APC  : 2023-02-17 09:05:30 -0500
 
 
 
-## ESXi Memory reading
+# ESXi Memory reading
 
 * I have four 16GB modules installed in my ESXi host.
 * `esxcli hardware memory get` shows ` Physical Memory: 68683657216 Bytes` 
@@ -471,7 +471,7 @@ END APC  : 2023-02-17 09:05:30 -0500
   * 8TB Hard Drive = 8000 gigabytes = 8 terabytes  = 7.28 tebibytes
 * Reddit confirmed my suspicion that ESXi is reporting kibibytes in actuality but labeling them as kilobytes. 
 
-## Unraid HDD and system readings
+# Unraid HDD and system readings
 
 * Requires passwordless SSH to be set up, so logging in doesn't need to be interactive
 
@@ -535,7 +535,7 @@ END APC  : 2023-02-17 09:05:30 -0500
   * I had a `diskstats.cron` file there with `\* * * * * /usr/bin/php /boot/myScripts/hdStats.php &> /dev/null`. I've moved it out of the directory and run `update_cron` to reload the crontab without a reboot, and then ran `cat /etc/cron.d/root` to check what the current cron setup was (note that `crontab -l` isn't what you want here)
 
 
-## Authentication
+# Authentication
 
 - InfluxDB 2.x is moving to token-based authentication that needs to be passed with each write API call.
 - Influx 1.x has HTTP Basic Auth as authentication, as documented in https://docs.influxdata.com/influxdb/v1.8/administration/authentication_and_authorization/
@@ -544,7 +544,7 @@ END APC  : 2023-02-17 09:05:30 -0500
 
 
 
-## InfluxDB CLI
+# InfluxDB CLI
 
 * Enter into the Influx prompt with `influx` or `influx -precision rfc3339`
   * By default, timestamps print out in nanoseconds which  is unreadable. Initialize Influx with `influx -precision rfc3339` to get full date printouts
@@ -593,3 +593,20 @@ END APC  : 2023-02-17 09:05:30 -0500
 - I ran `pyenv install 3.11` and got only alphas and dev versions available. However, it gave a hint that pyenv should be updated to get other versions. Sure enough, I ran `cd /root/.pyenv/plugins/python-build/../.. && git pull && cd -` as it told me to do, and then ran the install again and 3.11.1 installed! 
 - I had to run the same `pyenv global 3.11.1` and `pyenv uninstall 3.10.0` and `pyenv rehash` but I also had to run `pyenv local 3.11.1` from within the `/root/influx-scripts-python` to make sure it was using the right version, which I only found out after running `pyenv local` and finding it still using 3.10.0. Once I fixed that, I could run `pip install pipenv`
 - I then copied over all the new files with `scp ~/GitHub/kubedzero/influx-scripts/influx-scripts-python/* root@centos:/root/influx-scripts-python/` and got `FileNotFoundError: [Errno 2] No such file or directory: '/root/.local/share/virtualenvs/influx-scripts-python-2wO9Mla4/bin/python'` so I deleted the virtualenv and restarted the creation with `pipenv install` which reinstalled the dependencies and seemed to work perfectly. 
+
+
+
+# Pipenv
+
+- Pipenv does dependency management, creating virtual environments under which Python will run with a select set of dependencies listed in the Pipfile and Pipfile.lock
+- The lock file declares the exact version used, while the Pipfile declares the general dependencies. 
+- Add a new dependency with `pipenv install pysnmp-lextudio` and this will update the Pipfile
+- Running `pipenv install` will set up the virtual environment and install all the necessary dependencies. If a Pipfile is updated, this will grab all the new dependencies too
+- Running `pipenv run python3 apc.py` will execute the Python script inside the virtual environment
+
+
+
+# SNMP
+
+- I spent a good amount of time looking around for which SNMP library to use in Python. I ended up using https://www.pysnmp.com/ https://pypi.org/project/pysnmp-lextudio/ because it seems to be the forked successor of the most popular package after the author passed away, and a few other projects seem to have centered on using this particular fork (there are others). The documentation is also very good https://docs.lextudio.com/pysnmp/quick-start
+- I was looking for a native Python implementation, not one that relied on `net-snmp` or another system library that may make the script less portable across operating systems
