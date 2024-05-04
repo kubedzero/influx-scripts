@@ -12,7 +12,8 @@ ip_addresses_to_influx_hosts = [("10.1.1.31", "nodemcu3"),  # office esp32 Feath
                                 ("10.1.1.37", "nodemcu1"),  # bed amica2 DHT22 BME280
                                 ("10.1.1.36", "nodemcu2"),  # bathroom amica1 DHT22 BME280
                                 ("10.1.1.34", "nodemcu4"),  # couch geek1 SCD40 SGP30 (adafruit) BME280
-                                ("10.1.1.35", "nodemcu5")]  # bedbath geek2 SGP30
+                                ("10.1.1.40", "nodemcu5"),  # bedbath esp32 feiyang1 SGP30 BME280
+                                ("10.1.1.35", "nodemcu6")]  # outside geek2 SGP30 BME280 VEML6075
 
 # These Tuples define the names of the fields in InfluxDB, and the ESP-reported field names they are derived from.
 # In special cases such as dew point, multiple inputs are needed, and are defined with a nested Tuple in this case
