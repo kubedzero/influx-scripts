@@ -4,3 +4,4 @@ INFLUX_ORG = "org"
 INFLUX_TOKEN = "token"
 INFLUX_URL = "http://localhost:8086"
 APC_SNMPV3_USER = "user"
+S16_LOGIN_TUPLE = ("ubnt","ubnt")
