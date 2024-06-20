@@ -26,39 +26,18 @@ description_to_influx_field_dict = {"TEMP-1": "temp1",
                                     "PoE-IN-2": "poeIn2",
                                     "DC-IN-1": "dcIn1"}
 
-# Sample data to test without actually pinging an S16. Line-for-line accuracy including whitespace
-sample_data = """
-Temperature Sensors:
-Unit     Sensor  Description       Temp (C)    State           Max_Temp (C)
-----     ------  ----------------  ----------  --------------  --------------
-1        1       TEMP-1            56          Normal          59
-1        2       TEMP-2            56          Normal          58
-1        3       PoE-01            59          Normal          63
-1        4       PoE-02            47          Normal          51
-1        5       PoE-03            59          Normal          61
-
-Power Modules:
-Unit     Power supply   Description        Type          State           Consumed(W)   Voltage(V)  Current(mA) Consumed Meter(Whr)
-----     ------------   ----------------   ----------    -------------- ------------ ------------ ------------ -------------------
-1        1              PoE-IN-1           Fixed         Not powered            0.00         6.65         0.00                0.00
-1        2              PoE-IN-2           Fixed         Not powered            0.00         0.00         0.00                0.00
-1        3              DC-IN-1            Fixed         Powering             100.48        53.49      1878.48           101772.33
-
-"""
-
 
 # Given an IP of an S16 and its user/pass, connect to it and get its environmental data
 def fetch_data(current_ip, login_user, login_password):
-    # # Establish a connection with the device. Use the `terminal_server` device type to avoid netmiko
-    # # preconfigured setups to automatically run `configure` or `enable terminal` the way most devices need
-    # net_connect = ConnectHandler(device_type='terminal_server', ip=current_ip, username=login_user,
-    #                              password=login_password)
-    # # Run the "show environment" command that prints a human-readable table of data
-    # data = net_connect.send_command("show environment")
-    # # Disconnect from the device now that the data is retrieved
-    # net_connect.disconnect()
-    # return data
-    return sample_data
+    # Establish a connection with the device. Use the `terminal_server` device type to avoid netmiko
+    # preconfigured setups to automatically run `configure` or `enable terminal` the way most devices need
+    net_connect = ConnectHandler(device_type='terminal_server', ip=current_ip, username=login_user,
+                                 password=login_password)
+    # Run the "show environment" command that prints a human-readable table of data
+    data = net_connect.send_command("show environment")
+    # Disconnect from the device now that the data is retrieved
+    net_connect.disconnect()
+    return data
 
 
 # Convert a dict to a string in Line Protocol, which is `field=value,field2=value2,field3=value3` for the data section
@@ -177,5 +156,5 @@ def collect_and_write_s16_readings():
 if __name__ == '__main__':
     wait_seconds = randint(0, 10)
     print("Adding {} second(s) of jitter before executing".format(wait_seconds))
-    # sleep(wait_seconds)
+    sleep(wait_seconds)
     collect_and_write_s16_readings()
