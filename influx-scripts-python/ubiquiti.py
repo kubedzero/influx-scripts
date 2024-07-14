@@ -3,8 +3,7 @@ from random import randint
 from time import time, sleep
 
 from netmiko import ConnectHandler
-
-from netmiko.exceptions import NetMikoTimeoutException, NetMikoAuthenticationException, SSHException
+from netmiko.exceptions import NetMikoTimeoutException, NetMikoAuthenticationException, SSHException, ReadTimeout
 
 from influx_writer import send_data_to_influx
 from my_credentials import S16_LOGIN_TUPLE
@@ -64,7 +63,7 @@ def collect_and_write_s16_readings():
             print("\nChecking IP {} with Influx Name {}".format(current_ip, influx_measurement_tag_name))
             data = fetch_data(current_ip, login_user, login_password)
             print(data)
-        except (NetMikoTimeoutException, NetMikoAuthenticationException, SSHException) as exit_error:
+        except (NetMikoTimeoutException, NetMikoAuthenticationException, SSHException, ReadTimeout) as exit_error:
             # Don't exit on an Exception when getting data, rather skipping the current IP
             print("Could not connect/fetch from IP {}, skipping. Error was {}".format(current_ip, exit_error))
             continue
