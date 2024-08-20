@@ -177,6 +177,10 @@ def collect_and_write_esp_sensor_readings():
         esp_dict = parse_data_into_dict(line_list)
         # Remove key/value pairs from the dict when the value doesn't meet the criteria needed for saving to Influx
         filter_bad_values_from_dict(esp_dict)
+        # Skip the rest of this IP if the dict is empty
+        if len(esp_dict) == 0:
+            print("Value Dict had zero entries after bad value filtering, skipping this NodeMCU")
+            continue
         # Run conversions and create a new dict keyed on the field name in Influx, rather than the ESP name
         influx_dict = parse_esp_dict_into_influx_dict(esp_dict)
         # Convert the Influx field name dict into a Line Protocol string, but just the data at this point
