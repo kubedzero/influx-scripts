@@ -73,6 +73,15 @@ def parse_raw_data_into_field_set(data_string):
         try:
             # Get the data value, if it exists
             data_value = fetch_value_from_json(json_data, http_field)
+            # Validate that the data value contains a good reading
+            # Protect against invalid BME temperature readings
+            if ((influx_field in "temperaturefbme" and data_value < -50)
+                    # Protect against invalid BME humidity readings
+                    or (influx_field in "humiditybme" and data_value < 1)
+                    # Protect against null/none BME dewpoint readings
+                    or (influx_field in "dewpointfbme" and data_value is None)):
+                print("Invalid data found for field {}, value was [{}]. Skipping.".format(http_field, data_value))
+                continue
             # Adjust millimeters of mercury pressure mmHg to inches of mercury inHg
             if "Pressure" in http_field:
                 data_value = "{:.2f}".format(float(data_value) / 25.4)
