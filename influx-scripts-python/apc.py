@@ -1,9 +1,12 @@
 import decimal
+from asyncio import run
 from random import randint
 from time import time, sleep
 
+from pysnmp.entity.engine import SnmpEngine
 from pysnmp.error import PySnmpError
-from pysnmp.hlapi import ObjectType, ObjectIdentity, getCmd, SnmpEngine, UsmUserData, UdpTransportTarget, ContextData
+from pysnmp.hlapi.v3arch import get_cmd, UsmUserData, UdpTransportTarget, ContextData
+from pysnmp.smi.rfc1902 import ObjectType, ObjectIdentity
 
 from influx_writer import send_data_to_influx
 from my_credentials import APC_SNMPV3_USER
@@ -35,12 +38,21 @@ def create_object_type_list_from_oid_list(oid_list):
 
 
 # Given an IP address and a list of OIDs, fetch the OID values using the SNMP library's GET command
-def fetch_data(ip_address, oid_list):
+async def fetch_data(ip_address, oid_list):
     object_type_list = create_object_type_list_from_oid_list(oid_list)
+    snmp_engine = SnmpEngine()
     # For SNMPV2, replace UsmUserData("someSNMPuser") with CommunityData("public")
-    result_tuple = getCmd(SnmpEngine(), UsmUserData(APC_SNMPV3_USER),
-                          UdpTransportTarget((ip_address, snmp_port_number)), ContextData(), *object_type_list)
-    return result_tuple
+    iterator = get_cmd(snmp_engine,
+                       UsmUserData(APC_SNMPV3_USER),
+                       await UdpTransportTarget.create((ip_address, snmp_port_number)),
+                       ContextData(),
+                       *object_type_list)
+
+    error_indication, error_status, error_index, variable_binds = await iterator
+
+    # Copied from quick start https://docs.lextudio.com/pysnmp/v7.1/quick-start
+    snmp_engine.close_dispatcher()
+    return error_indication, error_status, error_index, variable_binds
 
 
 # Convert the dict to a string in Line Protocol, which is `field=value,field2=value2,field3=value3` for the data section
@@ -62,7 +74,7 @@ def collect_and_write_apc_readings():
         print("\nChecking IP {} with Influx Host Name {}".format(current_ip, influx_ups_name))
         try:
             # Get the data from the current IP, using the dict to source the OIDs needed
-            data = fetch_data(current_ip, oid_to_influx_field_dict.keys())
+            data = run(fetch_data(current_ip, oid_to_influx_field_dict.keys()))
         except PySnmpError:
             # Don't exit on an Exception when getting data, rather skipping the current IP
             print("Could not connect/fetch from IP {}, skipping".format(current_ip))
@@ -88,7 +100,7 @@ def collect_and_write_apc_readings():
         influx_dict = {}
         # Each var_bind is a tuple itself, with the first element being an identifier and the second a value
         for var_bind in var_binds:
-            data_oid = var_bind[0].getOid().prettyPrint()
+            data_oid = var_bind[0].get_oid().prettyPrint()
             data_value = var_bind[1].prettyPrint()
             print("Retrieved OID {} with value {}".format(data_oid, data_value))
             # APC returns integers and requires division by 10 to get the true value

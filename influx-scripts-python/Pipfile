@@ -6,8 +6,8 @@ name = "pypi"
 [packages]
 influxdb-client = "*"
 requests = "*"
-pysnmp-lextudio = "*"
 netmiko = "*"
+pysnmp = "*"
 
 [dev-packages]
 
