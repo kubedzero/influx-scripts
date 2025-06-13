@@ -87,12 +87,6 @@ def parse_raw_data_into_field_set(data_string):
     return ",".join(line_protocol_list)
 
 
-# Go through the Set and fix/modify data values that need adjusting, such as millimeters to inches
-def modify_data(line_protocol_field_set):
-    for influx_field, http_field in influx_fields_to_http_fields:
-        print("hello")
-
-
 # Main method to retrieve data from multiple Tasmota devices and write Line Protocol data to InfluxDB
 def collect_and_write_tasmota_readings():
     # Instantiate a list used to store lines of Line Protocol to write to Influx
