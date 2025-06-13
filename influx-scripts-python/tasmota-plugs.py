@@ -8,28 +8,35 @@ from influx_writer import send_data_to_influx
 
 # These Tuples define the IP address from which to fetch data and the host string stored in InfluxDB for each.
 # This way, if the IP address changes, an update can be made to keep the data going to the same tag in Influx
-ip_addresses_to_influx_hosts = [("lamp.brad", "lamp"),
-                                ("tv.brad", "tv"),
-                                ("hvac1.brad", "hvac1"),
-                                ("hvac2.brad", "hvac2"),
-                                ("fridge.brad", "fridge"),
-                                ("blanket.brad", "blanket"),
-                                ("kitchen1.brad", "kitchen"),
-                                ("server-switch.brad", "server"),
-                                ("ct-desk.brad", "ctdesk"),
-                                ("jb-desk.brad", "jbdesk"),
-                                ("heater", "heater"),
-                                ("kitchen2.brad", "kitchen2")]
+ip_addresses_to_influx_hosts = [
+    ("lamp.brad", "lamp"),
+    ("tv.brad", "tv"),
+    ("hvac1.brad", "hvac1"),
+    ("hvac2.brad", "hvac2"),
+    ("fridge.brad", "fridge"),
+    ("blanket.brad", "blanket"),
+    ("kitchen1.brad", "kitchen"),
+    ("server-switch.brad", "server"),
+    ("ct-desk.brad", "ctdesk"),
+    ("jb-desk.brad", "jbdesk"),
+    ("heater.brad", "heater"),
+    ("kitchen2.brad", "kitchen2"),
+    ("macpro.brad", "unraid"),
+    ("minipc.brad", "couch"),
+    ("couchblanket.brad", "beelink")
+]
 
 # These Tuples define the names of the fields in InfluxDB, and the Tasmota-reported field names they are derived from.
-influx_fields_to_http_fields = [("kilowattHours", "StatusSNS.ENERGY.Total"),
-                                ("voltage", "StatusSNS.ENERGY.Voltage"),
-                                ("powerFactor", "StatusSNS.ENERGY.Factor"),
-                                ("watts", "StatusSNS.ENERGY.Power"),
-                                ("amps", "StatusSNS.ENERGY.Current"),
-                                ("voltAmps", "StatusSNS.ENERGY.ApparentPower"),
-                                ("uptime", "StatusSTS.UptimeSec"),
-                                ("powerState", "Status.Power")]
+influx_fields_to_http_fields = [
+    ("kilowattHours", "StatusSNS.ENERGY.Total"),
+    ("voltage", "StatusSNS.ENERGY.Voltage"),
+    ("powerFactor", "StatusSNS.ENERGY.Factor"),
+    ("watts", "StatusSNS.ENERGY.Power"),
+    ("amps", "StatusSNS.ENERGY.Current"),
+    ("voltAmps", "StatusSNS.ENERGY.ApparentPower"),
+    ("uptime", "StatusSTS.UptimeSec"),
+    ("powerState", "Status.Power")
+]
 
 
 # Given a JSON blob and a dot.separated.path to the key of the desired value, fetch that value or return an error
