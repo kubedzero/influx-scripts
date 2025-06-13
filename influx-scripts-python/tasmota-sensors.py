@@ -9,6 +9,7 @@ from influx_writer import send_data_to_influx
 # These Tuples define the IP address from which to fetch data and the host string stored in InfluxDB for each.
 # This way, if the IP address changes, an update can be made to keep the data going to the same tag in Influx
 ip_addresses_to_influx_hosts = [
+    ("amica-1.brad", "node7"),
     ("amica-2.brad", "node1"),
     ("huzzah-1.brad", "node2"),
     ("feiyang-1.brad", "node3"),
