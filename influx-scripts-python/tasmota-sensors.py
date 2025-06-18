@@ -40,7 +40,7 @@ influx_fields_to_http_fields = [
     ("temperaturefdht", "StatusSNS!AM2301!Temperature"),
     ("humiditydht", "StatusSNS!AM2301!Humidity"),
     ("dewpointfdht", "StatusSNS!AM2301!DewPoint"),
-    ("uptime", "StatusSTS.UptimeSec"),
+    ("uptime", "StatusSTS!UptimeSec"),
 ]
 
 
