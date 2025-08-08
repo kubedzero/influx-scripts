@@ -33,7 +33,8 @@ def collect_and_write_speedtest_readings():
                      # TODO enable after good servers are found "--server-id={}".format(selected_speedtest_server_id),
                      "--precision=0",
                      "--progress=no",
-                     "--format=json", ]
+                     "--format=json",
+                     "--accept-license",]
     print("\nRunning speedtest shell command [{}]".format(" ".join(shell_command)))
 
     # Run the speedtest using subprocess, skip parsing if the executable doesn't exist
