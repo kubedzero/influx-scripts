@@ -1,5 +1,8 @@
-#!/usr/bin/zsh
-cd /root/influx-scripts-python/
-/root/.pyenv/shims/pipenv run python3 tasmota-sensors.py
-/root/.pyenv/shims/pipenv run python3 tasmota-plugs.py
-/root/.pyenv/shims/pipenv run python3 apc.py
+#!/usr/bin/bash
+
+# Script to help execute on Linux Debian CT/LXC
+cd /root/influx-scripts/
+# UV will automatically create a .venv, install Python and dependencies, and run the files
+/root/.local/bin/uv run tasmota-sensors.py
+/root/.local/bin/uv run tasmota-plugs.py
+/root/.local/bin/uv run apc.py
