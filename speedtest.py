@@ -27,8 +27,9 @@ def collect_and_write_speedtest_readings():
     selected_speedtest_server_id = choice(speedtest_server_ids)
 
     # Build the shell command to execute
+    # NOTE: install the Ookla speedtest utility following instructions on https://www.speedtest.net/apps/cli
     # NOTE: current `speedtest --version` reports 1.2.0.84 on macOS and Debian
-    shell_command = ["/opt/homebrew/bin/speedtest",
+    shell_command = ["/usr/bin/speedtest",
                      # TODO enable after good servers are found "--server-id={}".format(selected_speedtest_server_id),
                      "--precision=0",
                      "--progress=no",
