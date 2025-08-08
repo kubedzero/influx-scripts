@@ -66,6 +66,7 @@ def fetch_data_from_ip(ip_address):
 # Given the String representation of the Tasmota data, parse through it and return the Line Protocol version
 def parse_raw_data_into_field_set(data_string):
     line_protocol_list = []
+    # TODO for later: influx_fields_to_data_values_dict = {}
     # Convert to JSON
     json_data = loads(data_string)
     # Iterate through influx_fields_to_http_fields, using each entry's JSON search string and Influx field name
@@ -90,8 +91,17 @@ def parse_raw_data_into_field_set(data_string):
             # Muting for sensors because most devices are missing most sensors
             # print("Could not find value for {}, skipping Influx value {}".format(http_field, influx_field))
             continue
+        # Add the key/value pair to a running Dictionary
+        # TODO for later: influx_fields_to_data_values_dict[influx_field]=data_value
+        # TODO refactor this to make it a dict of the influx field and data value
+        # TODO after loop, move the pressure formatting down here, iterate through the dict and modify where there's pressure
+        # TODO search for DHT values and add a new DHT dewpoint using the calculation if the proper keys exist
+        # TODO run the below append/format to build the list taking in each key of the dict
         # Add the key/value pair to a running String consisting of the line protocol data
         line_protocol_list.append("{}={}".format(influx_field, data_value))
+        # Go through the Dict of values and validate data, removing invalid data such as null values
+        # Go through the Dict of values and adjust data such as unit conversion
+        # Go through the Dict of values and calculate new data such as dewpoint
     # Return the various key/value pairs, separated by commas as Line Protocol dictates
     return ",".join(line_protocol_list)
 
