@@ -1,0 +1,12 @@
+[project]
+name = "influx-scripts"
+version = "0.1.0"
+description = "InfluxDB data collection scripts"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "influxdb-client>=1.49.0",
+    "netmiko>=4.6.0",
+    "pysnmp>=7.1.21",
+    "requests>=2.32.4",
+]
