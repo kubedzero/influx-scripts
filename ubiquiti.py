@@ -158,10 +158,6 @@ def collect_and_write_s16_readings():
         # Add the completed Line Protocol to the list of Line Protocol to write to Influx
         line_protocol_string_list.append(line_protocol_full_string)
 
-    # Skip calling InfluxDB if the Line Protocol list ended up being empty
-    if len(line_protocol_string_list) < 1:
-        print("No S16 UPS data found, exiting")
-        exit(0)
     print("\nWriting data from {} S16 unit(s) into InfluxDB".format(len(line_protocol_string_list)))
     send_data_to_influx(line_protocol_string_list)
     print("Completed writing S16 data to Influx!")

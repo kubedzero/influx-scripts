@@ -34,7 +34,7 @@ def collect_and_write_speedtest_readings():
                      "--precision=0",
                      "--progress=no",
                      "--format=json",
-                     "--accept-license",]
+                     "--accept-license", ]
     print("\nRunning speedtest shell command [{}]".format(" ".join(shell_command)))
 
     # Run the speedtest using subprocess, skip parsing if the executable doesn't exist

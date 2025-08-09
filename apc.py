@@ -132,10 +132,6 @@ def collect_and_write_apc_readings():
         # Add the completed Line Protocol to the list of Line Protocol to write to Influx
         line_protocol_string_list.append(line_protocol_full_string)
 
-    # Skip calling InfluxDB if the Line Protocol list ended up being empty
-    if len(line_protocol_string_list) < 1:
-        print("No APC UPS data found, exiting")
-        exit(0)
     print("\nWriting data from {} APC UPS unit(s) into InfluxDB".format(len(line_protocol_string_list)))
     send_data_to_influx(line_protocol_string_list)
     print("Completed writing APC data to Influx!")
