@@ -17,7 +17,27 @@ from my_credentials import APC_SNMPV3_USER
 
 # These Tuples define the IP address from which to fetch data and the tag "ups" stored in InfluxDB for each.
 # This way, if the IP address changes, an update can be made to keep the data going to the same tag in Influx
-ip_addresses_to_influx_ups = [("apc.brad", "apc")]
+ip_addresses_to_influx_ups = [
+    ("nn162", "10.96.40.180"),
+    ("nn1933", "10.70.188.63"),
+    ("nn1934", "10.70.188.46"),
+    ("nn1936", "10.70.204.5"),
+    ("nn2299-basement", "10.98.62.246"),
+    ("nn2299-roof", "10.98.62.235"),
+    ("nn2701", "10.70.205.21"),
+    ("nn333-329", "10.96.83.67"),
+    ("nn333-345", "10.96.83.68"),
+    ("nn3461-basement", "10.70.171.9"),
+    ("nn3461-roof", "10.70.179.4"),
+    ("nn552", "10.70.139.5"),
+    ("nn584-basement", "10.70.198.2"),
+    ("nn584-roof", "10.70.198.23"),
+    ("nn640", "10.70.202.62"),
+    ("nn641", "10.96.160.107"),
+    ("nn648", "10.70.203.11"),
+    ("nn730-roof", "10.70.211.200"),
+    ("nn730-telco", "10.70.211.10"),
+]
 # This Dict defines the SNMP OIDs under which the values are retrieved, alongside the names of each field in InfluxDB
 oid_to_influx_field_dict = {"1.3.6.1.4.1.318.1.1.1.3.3.1.0": "utilVoltage",
                             "1.3.6.1.4.1.318.1.1.1.2.3.2.0": "upsTemp",
@@ -69,8 +89,8 @@ def collect_and_write_apc_readings():
     line_protocol_string_list = []
     # Iterate through each tuple of IP and Influx ups name
     for ip_to_ups_tuple in ip_addresses_to_influx_ups:
-        current_ip = ip_to_ups_tuple[0]
-        influx_ups_name = ip_to_ups_tuple[1]
+        influx_ups_name = ip_to_ups_tuple[0]
+        current_ip = ip_to_ups_tuple[1]
         print("\nChecking IP {} with Influx Host Name {}".format(current_ip, influx_ups_name))
         try:
             # Get the data from the current IP, using the dict to source the OIDs needed

@@ -10,20 +10,26 @@ from my_credentials import S16_LOGIN_TUPLE
 
 # These Tuples define the IP address from which to fetch data and the tag "name" stored in InfluxDB for each.
 # This way, if the IP address changes, an update can be made to keep the data going to the same tag in Influx
-s16_ip_tag_tuples = [("10.70.188.201", "nn1932"),
-                     ("10.70.161.28", "nn2463"),
-                     ("10.96.224.184", "nn898"),
-                     ("10.70.181.253", "nn5916"),
-                     ("10.96.158.56", "nn632"),
-                     ("10.96.101.198", "nn407"),
-                     ("10.99.97.70", "nn3461"),
-                     ("10.70.134.5", "nn1635"),
-                     ("10.70.88.100", "sn3"),
-                     ("10.96.40.133", "nn162"),
-                     ("10.98.58.183", "nn2282"),
-                     ("10.98.62.251", "nn2299"),
-                     ("10.70.131.185", "nn1340"),
-                     ("10.42.43.2", "sn1")]
+s16_ip_tag_tuples = [
+    ("nn1340", "10.70.131.185"),
+    ("nn162", "10.96.40.133"),
+    ("nn1635", "10.70.142.5"),
+    ("nn1932", "10.70.188.80"),
+    ("nn227", "10.70.70.20"),
+    ("nn2282", "10.98.58.183"),
+    ("nn2299", "10.98.62.233"),
+    ("nn2463", "10.70.161.5"),
+    ("nn3461", "10.70.179.5"),
+    ("nn407", "10.96.101.198"),
+    ("nn5151", "10.70.121.5"),
+    ("nn544", "10.70.130.5"),
+    ("nn5916", "10.70.181.5"),
+    ("nn632", "10.96.158.56"),
+    ("nn648", "10.70.203.5"),
+    ("nn730", "10.70.211.130"),
+    ("nn898", "10.96.224.184"),
+    ("sn3", "10.70.88.100"),
+]
 
 # Define the "measurement" category under which the data fields will be stored
 influx_measurement_name = "s16_data"
@@ -66,8 +72,8 @@ def collect_and_write_s16_readings():
     line_protocol_string_list = []
     # Iterate through each tuple of IP and Influx tag name
     for s16_ip_tag_tuple in s16_ip_tag_tuples:
-        current_ip = s16_ip_tag_tuple[0]
-        influx_measurement_tag_name = s16_ip_tag_tuple[1]
+        influx_measurement_tag_name = s16_ip_tag_tuple[0]
+        current_ip = s16_ip_tag_tuple[1]
         login_user = S16_LOGIN_TUPLE[0]
         login_password = S16_LOGIN_TUPLE[1]
 
