@@ -23,8 +23,7 @@ walk_oid_to_mib_name = {".1.3.6.1.4.1.8072.1.3.2.4.1.2.": "NET-SNMP-EXTEND-MIB::
 
 # This Dict defines the sublevels of OID under each walk, and the type of data they represent. Mini MIB
 # These were found by comparing snmpwalk outputs with and without the -O OUTOPTS / n:  print OIDs numerically
-influx_type_to_oid_dict = {"cpumhz": "1.3.6.1.4.1.8072.1.3.2.4.1.2.6.99.112.117.109.104.122.1.",
-                           "memInfo": "1.3.6.1.4.1.8072.1.3.2.4.1.2.7.109.101.109.105.110.102.111.",
+influx_type_to_oid_dict = {"memInfo": "1.3.6.1.4.1.8072.1.3.2.4.1.2.7.109.101.109.105.110.102.111.",
                            "diskFree": "1.3.6.1.4.1.8072.1.3.2.4.1.2.8.100.105.115.107.102.114.101.101.",
                            "diskTemp": "1.3.6.1.4.1.8072.1.3.2.4.1.2.8.100.105.115.107.116.101.109.112.",
                            "shareFree": "1.3.6.1.4.1.8072.1.3.2.4.1.2.9.115.104.97.114.101.102.114.101.101.",
@@ -40,7 +39,7 @@ snmp_port_number = 161
 async def fetch_data(ip_address, walk_oid):
     snmp_engine = SnmpEngine()
     # For SNMPV3, replace CommunityData("public") with UsmUserData("someSNMPuser")
-    # lookupMib=False will leave full OID numeric representation. Otherwise it might be SNMPv2-SMI::snmpModules.16.1.5.
+    # lookupMib=False will leave full OID numeric representation. Otherwise, it might be SNMPv2-SMI::snmpModules.16.1.5.
     # lexicographicMode=False stops the walk when leaving the defined OID subsection
     # Taken from library examples
     objects = walk_cmd(snmp_engine,
@@ -52,11 +51,23 @@ async def fetch_data(ip_address, walk_oid):
                        lexicographicMode=False)
     # Walk returns a list of tuples, each containing ErrorIndication, ObjectType, and more
     walk_response_objects = [item async for item in objects]
-
     # Copied from quick start https://docs.lextudio.com/pysnmp/v7.1/quick-start
     snmp_engine.close_dispatcher()
-
     return walk_response_objects
+
+
+def validate_and_add_field_set_to_line_protocol_string_list(
+        influx_host_name, influx_type, field_set, epoch_time_seconds, line_protocol_string_list):
+    # Skip adding the field set to output if it is empty
+    if len(field_set) < 1:
+        print("No valid fields found for {}, skipping submission".format(influx_type))
+        return
+    # Format the data into line protocol with the tags, fields, and time for the record
+    line_protocol_string = "unraid,host={},type={} {} {}".format(
+        influx_host_name, influx_type, ",".join(field_set), epoch_time_seconds)
+    # Add the line protocol into the caller's list
+    line_protocol_string_list.append(line_protocol_string)
+    print("Completed {} parsing: {}".format(influx_type, line_protocol_string))
 
 
 def assemble_line_protocol_from_data_dict(walk_result_parsed_dict, influx_host_name):
@@ -66,17 +77,15 @@ def assemble_line_protocol_from_data_dict(walk_result_parsed_dict, influx_host_n
     epoch_time_seconds = int(time())
     # Each Influx Type requires special handling to parse and arrange its values into a line protocol list
     for influx_type, influx_type_oid in influx_type_to_oid_dict.items():
+        walk_result_parsed_dict_keys_to_remove = []
         match influx_type:
-            case "cpumhz":
-                # CPU MHz isn't actually recorded, skip its parsing
-                continue
-            case "memInfo":
-                # meminfo contains almost 10 different values across its subtree
+            case "memInfo" | "diskFree" | "shareFree":
                 field_set = []
                 # Find all items in the walk result dict whose oid contains the selected oid
                 for walk_result_oid, walk_result_value in walk_result_parsed_dict.items():
                     if influx_type_oid in walk_result_oid:
-                        # When an item is found, parse its value and separate the string from the numeric
+                        # Parse matching item's value after marking the item for removal from the source dict
+                        walk_result_parsed_dict_keys_to_remove.append(walk_result_oid)
                         value_split = walk_result_value.split(":")
                         # Handle if the formatting was unexpected, skipping submission and printing
                         if len(value_split) != 2:
@@ -84,39 +93,12 @@ def assemble_line_protocol_from_data_dict(walk_result_parsed_dict, influx_host_n
                             continue
                         # Add the parsed value to the fieldset
                         field_set.append("{}={}".format(value_split[0], int(value_split[1])))
-                        # TODO Clean up the dictionary by removing the value once it's parsed
-                        # TODO this modifies the dict which is not allowed, fix this later
-                        # del walk_result_parsed_dict[walk_result_oid]
                 # The field set is now populated, so the final Line Protocol for this data can be generated
                 # Example: unraid,host=poorbox,type=memInfo Dirty=0,Committed_AS=898048000 1754713059
-                line_protocol_string_list.append("unraid,host={},type={} {} {}".format(influx_host_name,
-                                                                                       influx_type,
-                                                                                       ",".join(field_set),
-                                                                                       epoch_time_seconds))
-                print("Completed {} parsing for Unraid host {}".format(influx_type, influx_host_name))
-            case "diskFree":
-                field_set = []
-                # Find all items in the walk result dict whose oid contains the selected oid
-                for walk_result_oid, walk_result_value in walk_result_parsed_dict.items():
-                    if influx_type_oid in walk_result_oid:
-                        # When an item is found, parse its value and separate the string from the numeric
-                        value_split = walk_result_value.split(":")
-                        # Handle if the formatting was unexpected, skipping submission and printing
-                        if len(value_split) != 2:
-                            print("Unexpected format in {} line, skipping {}".format(influx_type, walk_result_value))
-                            continue
-                        # Add the parsed value to the fieldset
-                        field_set.append("{}={}".format(value_split[0], int(value_split[1])))
-                        # TODO Clean up the dictionary by removing the value once it's parsed
-                        # TODO this modifies the dict which is not allowed, fix this later
-                        # del walk_result_parsed_dict[walk_result_oid]
-                # The field set is now populated, so the final Line Protocol for this data can be generated
                 # Example: unraid,host=poorbox,type=diskFree boot=74170368,disk1=3892485283840 1754713059
-                line_protocol_string_list.append("unraid,host={},type={} {} {}".format(influx_host_name,
-                                                                                       influx_type,
-                                                                                       ",".join(field_set),
-                                                                                       epoch_time_seconds))
-                print("Completed {} parsing for Unraid host {}".format(influx_type, influx_host_name))
+                # Example: unraid,host=poorbox,type=shareFree Files=74170368,Backups=3892485283840 1754713059
+                validate_and_add_field_set_to_line_protocol_string_list(
+                    influx_host_name, influx_type, field_set, epoch_time_seconds, line_protocol_string_list)
             case "diskTemp":
                 # Disk Temp positive values communicate temperature, while negative values communicate standby state
                 # The diskActive Influx type thus also comes from diskTemp and must be recorded
@@ -125,7 +107,8 @@ def assemble_line_protocol_from_data_dict(walk_result_parsed_dict, influx_host_n
                 # Find all items in the walk result dict whose oid contains the selected oid
                 for walk_result_oid, walk_result_value in walk_result_parsed_dict.items():
                     if influx_type_oid in walk_result_oid:
-                        # When an item is found, parse its value and separate the string from the numeric
+                        # Parse matching item's value after marking the item for removal from the source dict
+                        walk_result_parsed_dict_keys_to_remove.append(walk_result_oid)
                         value_split = walk_result_value.split(":")
                         # Handle if the formatting was unexpected, skipping submission and printing
                         if len(value_split) != 2:
@@ -141,39 +124,11 @@ def assemble_line_protocol_from_data_dict(walk_result_parsed_dict, influx_host_n
                         else:
                             field_set_active.append("{}=-1".format(value_split[0]))
                 # The field set is now populated, so the final Line Protocol for this data can be generated
-                # Example: unraid,host=poorbox,type=diskFree boot=74170368,disk1=3892485283840 1754713059
-                line_protocol_string_list.append("unraid,host={},type={} {} {}".format(influx_host_name,
-                                                                                       influx_type,
-                                                                                       ",".join(field_set_temperature),
-                                                                                       epoch_time_seconds))
-                line_protocol_string_list.append("unraid,host={},type=diskActive {} {}".format(influx_host_name,
-                                                                                               ",".join(
-                                                                                                   field_set_active),
-                                                                                               epoch_time_seconds))
-                print("Completed diskTemp and diskActive parsing for Unraid host {}".format(influx_host_name))
-            case "shareFree":
-                field_set = []
-                # Find all items in the walk result dict whose oid contains the selected oid
-                for walk_result_oid, walk_result_value in walk_result_parsed_dict.items():
-                    if influx_type_oid in walk_result_oid:
-                        # When an item is found, parse its value and separate the string from the numeric
-                        value_split = walk_result_value.split(":")
-                        # Handle if the formatting was unexpected, skipping submission and printing
-                        if len(value_split) != 2:
-                            print("Unexpected format in {} line, skipping {}".format(influx_type, walk_result_value))
-                            continue
-                        # Add the parsed value to the fieldset
-                        field_set.append("{}={}".format(value_split[0], int(value_split[1])))
-                        # TODO Clean up the dictionary by removing the value once it's parsed
-                        # TODO this modifies the dict which is not allowed, fix this later
-                        # del walk_result_parsed_dict[walk_result_oid]
-                # The field set is now populated, so the final Line Protocol for this data can be generated
-                # Example: unraid,host=poorbox,type=diskFree boot=74170368,disk1=3892485283840 1754713059
-                line_protocol_string_list.append("unraid,host={},type={} {} {}".format(influx_host_name,
-                                                                                       influx_type,
-                                                                                       ",".join(field_set),
-                                                                                       epoch_time_seconds))
-                print("Completed {} parsing for Unraid host {}".format(influx_type, influx_host_name))
+                # Example: unraid,host=poorbox,type=diskTemp HGST_HUH721212ALE604_5PHGGGF=-2 1754713059
+                validate_and_add_field_set_to_line_protocol_string_list(
+                    influx_host_name, influx_type, field_set_temperature, epoch_time_seconds, line_protocol_string_list)
+                validate_and_add_field_set_to_line_protocol_string_list(
+                    influx_host_name, "diskActive", field_set_active, epoch_time_seconds, line_protocol_string_list)
             case "cpuPercent":
                 # cpuPercent reports using zero-indexed CPU core numbers
                 field_set = []
@@ -181,7 +136,8 @@ def assemble_line_protocol_from_data_dict(walk_result_parsed_dict, influx_host_n
                 # Find all items in the walk result dict whose oid contains the selected oid
                 for walk_result_oid, walk_result_value in walk_result_parsed_dict.items():
                     if influx_type_oid in walk_result_oid:
-                        # When an item is found, parse its value
+                        # Parse matching item's value after marking the item for removal from the source dict
+                        walk_result_parsed_dict_keys_to_remove.append(walk_result_oid)
                         # Handle if the formatting was unexpected, skipping submission and printing
                         if not walk_result_value.isdigit():
                             print("Unexpected format in {} line, skipping {}".format(influx_type, walk_result_value))
@@ -189,19 +145,20 @@ def assemble_line_protocol_from_data_dict(walk_result_parsed_dict, influx_host_n
                         # Add the value to the fieldset
                         field_set.append("{}={}".format(core_count, walk_result_value))
                         core_count += 1
-                        # TODO Clean up the dictionary by removing the value once it's parsed
-                        # TODO this modifies the dict which is not allowed, fix this later
-                        # del walk_result_parsed_dict[walk_result_oid]
                 # The field set is now populated, so the final Line Protocol for this data can be generated
                 # Example: unraid,host=poorbox,type=cpuPercent 0=3,1=3,2=3,3=3 1754713059
-                line_protocol_string_list.append("unraid,host={},type={} {} {}".format(influx_host_name,
-                                                                                       influx_type,
-                                                                                       ",".join(field_set),
-                                                                                       epoch_time_seconds))
-                print("Completed {} parsing for Unraid host {}".format(influx_type, influx_host_name))
+                validate_and_add_field_set_to_line_protocol_string_list(
+                    influx_host_name, influx_type, field_set, epoch_time_seconds, line_protocol_string_list)
             case _:
                 print("unknown influx type:", influx_type)
-    # TODO see if there are any remaining items in the dict and warn if so, that means there's data left unparsed
+        # After each round of the match case, clear items from the walk result dictionary that were processed
+        for key in walk_result_parsed_dict_keys_to_remove:
+            del walk_result_parsed_dict[key]
+    # See if there are any remaining items in the dict and warn if so, that means there's data left unparsed
+    if len(walk_result_parsed_dict) > 0:
+        print("Not all values fetched from SNMP were parsed! Remaining values: {}".format(walk_result_parsed_dict))
+    else:
+        print("All values fetched from SNMP were parsed!")
     # All parsing has been completed and the list of line protocol can now be returned for submission prep
     return line_protocol_string_list
 
@@ -216,25 +173,24 @@ def collect_and_write_unraid_readings():
         influx_host_name = ip_to_host_tuple[1]
         print("\nChecking IP {} with Influx Host Name {}".format(current_ip, influx_host_name))
         walk_result_list = []
-        for walk_oid in walk_oid_to_mib_name.keys():
+        for walk_oid, friendly_name in walk_oid_to_mib_name.items():
             try:
                 # Get the data from the current IP and OID
                 walk_response_objects = run(fetch_data(current_ip, walk_oid))
                 # Add the data to the running list of results across all walk OIDs
                 walk_result_list += walk_response_objects
             except PySnmpError as e:
-                # Don't exit on an Exception when getting data, rather skipping the current IP
-                print("Could not connect/fetch from IP {}, skipping. Error: {}".format(current_ip, e))
+                # Don't exit on an Exception when getting data, rather skipping the current attempt
+                print("Could not fetch {} from IP {}, skipping. Error: {}".format(friendly_name, current_ip, e))
                 continue
         # Now that the data from multiple walks have been fetched, parse them into a Dict
         walk_result_parsed_dict = {}
         for walk_single_result in walk_result_list:
-            # Handle if there is an ErrorIndication instead of None
+            # Handle if there is an ErrorIndication instead of None. Otherwise, get the OID and data value
             if walk_single_result[0] is not None:
                 print("ErrorIndication found for single walk result, skipping {}".format(walk_single_result[0]))
                 continue
-            # Otherwise, get the OID and data value
-            # oid_value is an ObjectName which is an ObjectIdentifier
+            # oid_value is an ObjectName which is an ObjectIdentifier, which has prettyPrint() available
             # For whatever reason the actual data is deeply nested in the return structure
             oid = walk_single_result[3][0][0].prettyPrint()
             data_value = walk_single_result[3][0][1].prettyPrint()
@@ -245,8 +201,7 @@ def collect_and_write_unraid_readings():
 
     # All the SNMP walks for all IPs have been completed, line protocol is ready for submission. Submit!
     print("\nWriting {} categories of data from {} Unraid server(s) into InfluxDB".format(
-        len(line_protocol_string_list),
-        len(ip_addresses_to_influx_host)))
+        len(line_protocol_string_list), len(ip_addresses_to_influx_host)))
     send_data_to_influx(line_protocol_string_list)
     print("Completed writing Unraid data to Influx!")
 
