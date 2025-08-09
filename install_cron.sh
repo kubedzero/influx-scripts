@@ -17,6 +17,7 @@ crontab -l > newcron
   echo "* * * * * cd /root/influx-scripts || exit && /usr/bin/nice -n 10 /root/.local/bin/uv run tasmota-plugs.py"
   echo "* * * * * cd /root/influx-scripts || exit && /usr/bin/nice -n 10 /root/.local/bin/uv run apc.py"
   echo "0,30 * * * * cd /root/influx-scripts || exit && /usr/bin/nice -n 10 /root/.local/bin/uv run speedtest.py"
+  echo "* * * * * cd /root/influx-scripts || exit && /usr/bin/nice -n 10 /root/.local/bin/uv run unraid.py"
 } >> newcron
 # Install new cron file and clean up temporary file
 crontab newcron
