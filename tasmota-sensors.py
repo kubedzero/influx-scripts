@@ -136,7 +136,8 @@ def collect_and_write_tasmota_readings():
 
 
 if __name__ == '__main__':
-    wait_seconds = randint(0, 10)
+    # https://servercheck.in/blog/little-jitter-can-help-evening-out-distributed
+    wait_seconds = randint(0, 5)
     print("Adding {} second(s) of jitter before executing".format(wait_seconds))
     sleep(wait_seconds)
     collect_and_write_tasmota_readings()

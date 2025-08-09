@@ -1,6 +1,6 @@
 from asyncio import run
 from random import randint
-from time import time
+from time import time, sleep
 
 from pysnmp.entity.engine import SnmpEngine
 from pysnmp.error import PySnmpError
@@ -235,6 +235,7 @@ def collect_and_write_unraid_readings():
                 continue
             # Otherwise, get the OID and data value
             # oid_value is an ObjectName which is an ObjectIdentifier
+            # For whatever reason the actual data is deeply nested in the return structure
             oid = walk_single_result[3][0][0].prettyPrint()
             data_value = walk_single_result[3][0][1].prettyPrint()
             # Add the parsed result into a dictionary for easier parsing of the next stage
@@ -251,7 +252,8 @@ def collect_and_write_unraid_readings():
 
 
 if __name__ == '__main__':
-    wait_seconds = randint(0, 10)
+    # https://servercheck.in/blog/little-jitter-can-help-evening-out-distributed
+    wait_seconds = randint(0, 5)
     print("Adding {} second(s) of jitter before executing".format(wait_seconds))
-    # sleep(wait_seconds)
+    sleep(wait_seconds)
     collect_and_write_unraid_readings()
